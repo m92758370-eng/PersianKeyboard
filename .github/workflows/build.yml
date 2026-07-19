@@ -1,0 +1,36 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد پروژه
+        uses: actions/checkout@v4
+
+      - name: نصب جاوا
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: باز کردن فایل zip پروژه
+        run: unzip -o PersianKeyboard.zip
+
+      - name: نصب Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: ساخت فایل APK
+        run: cd PersianKeyboard && gradle assembleDebug
+
+      - name: آپلود فایل APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PersianKeyboard-APK
+          path: PersianKeyboard/app/build/outputs/apk/debug/app-debug.apk
