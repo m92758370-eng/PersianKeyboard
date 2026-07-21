@@ -85,6 +85,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var pendingRunnable: Runnable? = null
     private var highlightedLabel: String? = null
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val heightPx = (280 * context.resources.displayMetrics.density).toInt()
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        setMeasuredDimension(width, heightPx)
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         rebuildKeys(w, h)
@@ -211,7 +217,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
         backgroundBitmap?.let {
             canvas.drawBitmap(it, 0f, 0f, null)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), overlayPaint)
