@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 
 class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
@@ -19,6 +20,11 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     override fun onCreateInputView(): View {
         keyboardView = CustomKeyboardView(this)
         keyboardView.listener = this
+        val heightPx = (280 * resources.displayMetrics.density).toInt()
+        keyboardView.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            heightPx
+        )
         return keyboardView
     }
 
