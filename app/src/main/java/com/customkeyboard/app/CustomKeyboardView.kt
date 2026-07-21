@@ -208,7 +208,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += switchW
         keys.add(KeyRect("▶", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
-        keys.add(KeyRect("␣", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
+        keys.add(KeyRect("کینگ آنتونی", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
         keys.add(KeyRect("⌫", RectF(x, bottomTop, x + backW, bottomBottom), KeyType.BACKSPACE))
         x += backW
@@ -238,7 +238,15 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             )
             val cx = key.rect.centerX()
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
-            canvas.drawText(key.label, cx, cy, textPaint)
+
+            if (key.type == KeyType.SPACE) {
+                val spaceTextPaint = Paint(textPaint).apply {
+                    textSize = rowHeight * 0.22f
+                }
+                canvas.drawText(key.label, cx, cy, spaceTextPaint)
+            } else {
+                canvas.drawText(key.label, cx, cy, textPaint)
+            }
 
             if (key.type == KeyType.LETTER) {
                 val replacement = PrefsHelper.getReplacement(context, key.label)
@@ -274,7 +282,16 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             flashKey(label)
             listener?.onCommitText(toCommit)
         } else {
-            clearPending()
+            if (pendingRunnable != null) {
+                handler.removeCallbacks(pendingRunnable!!)
+                val prevLabel = pendingKeyLabel
+                pendingRunnable = null
+                pendingKeyLabel = null
+                if (prevLabel != null) {
+                    flashKey(prevLabel)
+                    listener?.onCommitText(prevLabel)
+                }
+            }
             pendingKeyLabel = label
             val runnable = Runnable {
                 flashKey(label)
