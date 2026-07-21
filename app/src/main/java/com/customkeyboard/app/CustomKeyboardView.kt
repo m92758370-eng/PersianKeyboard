@@ -37,10 +37,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val type: KeyType
     )
 
-    companion object {
-        private const val DOUBLE_TAP_TIMEOUT_MS = 280L
-    }
-
     private var usePersian = true
     private val keys = mutableListOf<KeyRect>()
 
@@ -81,8 +77,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var backgroundH = -1
 
     private val handler = Handler(Looper.getMainLooper())
-    private var pendingKeyLabel: String? = null
-    private var pendingRunnable: Runnable? = null
     private var highlightedLabel: String? = null
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -262,52 +256,21 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val key = keys.firstOrNull { it.rect.contains(event.x, event.y) } ?: return true
 
         when (key.type) {
-            KeyType.SPACE -> { listener?.onSpace(); clearPending() }
-            KeyType.BACKSPACE -> { listener?.onBackspace(); clearPending() }
-            KeyType.ENTER -> { listener?.onEnter(); clearPending() }
-            KeyType.LANG_SWITCH -> { setLanguage(!usePersian); clearPending() }
-            KeyType.AUTOTYPE -> { listener?.onAutoTypeButton(); clearPending() }
+            KeyType.SPACE -> listener?.onSpace()
+            KeyType.BACKSPACE -> listener?.onBackspace()
+            KeyType.ENTER -> listener?.onEnter()
+            KeyType.LANG_SWITCH -> setLanguage(!usePersian)
+            KeyType.AUTOTYPE -> listener?.onAutoTypeButton()
             KeyType.LETTER -> handleLetterTap(key.label)
         }
         return true
     }
 
     private fun handleLetterTap(label: String) {
-        if (pendingKeyLabel == label && pendingRunnable != null) {
-            handler.removeCallbacks(pendingRunnable!!)
-            pendingRunnable = null
-            pendingKeyLabel = null
-            val replacement = PrefsHelper.getReplacement(context, label)
-            val toCommit = if (replacement.isNotEmpty()) replacement else label
-            flashKey(label)
-            listener?.onCommitText(toCommit)
-        } else {
-            if (pendingRunnable != null) {
-                handler.removeCallbacks(pendingRunnable!!)
-                val prevLabel = pendingKeyLabel
-                pendingRunnable = null
-                pendingKeyLabel = null
-                if (prevLabel != null) {
-                    flashKey(prevLabel)
-                    listener?.onCommitText(prevLabel)
-                }
-            }
-            pendingKeyLabel = label
-            val runnable = Runnable {
-                flashKey(label)
-                listener?.onCommitText(label)
-                pendingRunnable = null
-                pendingKeyLabel = null
-            }
-            pendingRunnable = runnable
-            handler.postDelayed(runnable, DOUBLE_TAP_TIMEOUT_MS)
-        }
-    }
-
-    private fun clearPending() {
-        pendingRunnable?.let { handler.removeCallbacks(it) }
-        pendingRunnable = null
-        pendingKeyLabel = null
+        val replacement = PrefsHelper.getReplacement(context, label)
+        val toCommit = if (replacement.isNotEmpty()) replacement else label
+        flashKey(label)
+        listener?.onCommitText(toCommit)
     }
 
     private fun flashKey(label: String) {
