@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 
 class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
@@ -47,6 +48,11 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     override fun onSpace() {
         currentInputConnection?.commitText(" ", 1)
+    }
+
+    override fun onSpaceLongPress() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showInputMethodPicker()
     }
 
     override fun onAutoTypeButton() {
