@@ -29,7 +29,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        stopAutoType()
+        pauseAutoType()
     }
 
     override fun onCommitText(text: String) {
@@ -51,10 +51,22 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     override fun onAutoTypeButton() {
         if (autoTypeRunning) {
-            stopAutoType()
+            pauseAutoType()
             Toast.makeText(this, "تایپ خودکار متوقف شد", Toast.LENGTH_SHORT).show()
         } else {
             startAutoType()
+        }
+    }
+
+    override fun onPauseResumeButton() {
+        if (autoTypeRunning) {
+            pauseAutoType()
+            Toast.makeText(this, "تایپ خودکار متوقف شد", Toast.LENGTH_SHORT).show()
+        } else if (autoTypeChars.isNotEmpty() && autoTypeIndex < autoTypeChars.size) {
+            resumeAutoType()
+            Toast.makeText(this, "تایپ خودکار ادامه یافت", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "چیزی برای ادامه دادن نیست", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -68,6 +80,11 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         autoTypeIndex = 0
         autoTypeRunning = true
         Toast.makeText(this, "تایپ خودکار شروع شد", Toast.LENGTH_SHORT).show()
+        scheduleNextChar()
+    }
+
+    private fun resumeAutoType() {
+        autoTypeRunning = true
         scheduleNextChar()
     }
 
@@ -91,7 +108,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         }, delay)
     }
 
-    private fun stopAutoType() {
+    private fun pauseAutoType() {
         autoTypeRunning = false
         handler.removeCallbacksAndMessages(null)
     }
