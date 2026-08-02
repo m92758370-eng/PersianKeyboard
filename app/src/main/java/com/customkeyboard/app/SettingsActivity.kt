@@ -1,5 +1,6 @@
 package com.customkeyboard.app
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -70,15 +71,41 @@ class SettingsActivity : AppCompatActivity() {
             val row = inflater.inflate(R.layout.item_letter_mapping, container, false)
             val label = row.findViewById<TextView>(R.id.letterLabel)
             val editText = row.findViewById<EditText>(R.id.replacementEditText)
+            val btnShowSaved = row.findViewById<Button>(R.id.btnShowSavedTexts)
             label.text = letter
             editText.setText(PrefsHelper.getReplacement(this, letter))
             editText.setOnFocusChangeListener { _, hasFocus ->
                 if (!hasFocus) {
-                    PrefsHelper.setReplacement(this, letter, editText.text.toString())
+                    val text = editText.text.toString()
+                    PrefsHelper.setReplacement(this, letter, text)
+                    if (text.isNotBlank()) {
+                        PrefsHelper.addSavedText(this, text)
+                    }
                 }
+            }
+            btnShowSaved.setOnClickListener {
+                showSavedTextsDialog(editText, letter)
             }
             container.addView(row)
         }
+    }
+
+    private fun showSavedTextsDialog(editText: EditText, letter: String) {
+        val savedTexts = PrefsHelper.getSavedTexts(this)
+        if (savedTexts.isEmpty()) {
+            Toast.makeText(this, "هنوز متنی ذخیره نشده", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val items = savedTexts.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("انتخاب متن ذخیره‌شده")
+            .setItems(items) { _, which ->
+                val chosen = items[which]
+                editText.setText(chosen)
+                PrefsHelper.setReplacement(this, letter, chosen)
+            }
+            .setNegativeButton("بستن", null)
+            .show()
     }
 
     override fun onPause() {
@@ -88,7 +115,11 @@ class SettingsActivity : AppCompatActivity() {
             val row = container.getChildAt(i)
             val label = row.findViewById<TextView>(R.id.letterLabel)?.text?.toString() ?: continue
             val editText = row.findViewById<EditText>(R.id.replacementEditText) ?: continue
-            PrefsHelper.setReplacement(this, label, editText.text.toString())
+            val text = editText.text.toString()
+            PrefsHelper.setReplacement(this, label, text)
+            if (text.isNotBlank()) {
+                PrefsHelper.addSavedText(this, text)
+            }
         }
         if (::autoTypeEditText.isInitialized) {
             PrefsHelper.setAutoTypeText(this, autoTypeEditText.text.toString())
