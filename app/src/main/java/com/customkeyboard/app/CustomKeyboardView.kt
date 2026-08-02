@@ -25,11 +25,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onEnter()
         fun onSpace()
         fun onAutoTypeButton()
+        fun onPauseResumeButton()
     }
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE }
+    private enum class KeyType { LETTER, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME }
 
     private data class KeyRect(
         val label: String,
@@ -191,15 +192,18 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bottomTop = rowHeight * letterRows.size
         val bottomBottom = bottomTop + rowHeight
-        val switchW = w * 0.14f
-        val autoW = w * 0.14f
-        val backW = w * 0.16f
-        val enterW = w * 0.16f
-        val spaceW = w - switchW - autoW - backW - enterW
+        val switchW = w * 0.13f
+        val pauseW = w * 0.12f
+        val autoW = w * 0.13f
+        val backW = w * 0.15f
+        val enterW = w * 0.15f
+        val spaceW = w - switchW - pauseW - autoW - backW - enterW
 
         var x = 0f
         keys.add(KeyRect(if (usePersian) "EN" else "فا", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
         x += switchW
+        keys.add(KeyRect("▶", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
+        x += pauseW
         keys.add(KeyRect("▶", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
         keys.add(KeyRect("کینگ آنتونی", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
@@ -261,6 +265,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.ENTER -> listener?.onEnter()
             KeyType.LANG_SWITCH -> setLanguage(!usePersian)
             KeyType.AUTOTYPE -> listener?.onAutoTypeButton()
+            KeyType.PAUSE_RESUME -> listener?.onPauseResumeButton()
             KeyType.LETTER -> handleLetterTap(key.label)
         }
         return true
