@@ -24,6 +24,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onBackspace()
         fun onEnter()
         fun onSpace()
+        fun onSpaceLongPress()
         fun onAutoTypeButton()
         fun onPauseResumeButton()
     }
@@ -37,6 +38,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val rect: RectF,
         val type: KeyType
     )
+
+    companion object {
+        private const val SPACE_LONG_PRESS_MS = 2000L
+    }
 
     private var usePersian = true
     private val keys = mutableListOf<KeyRect>()
@@ -79,6 +84,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
+
+    private var spacePressed = false
+    private var spaceLongPressTriggered = false
+    private val spaceLongPressRunnable = Runnable {
+        spaceLongPressTriggered = true
+        listener?.onSpaceLongPress()
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val heightPx = (280 * context.resources.displayMetrics.density).toInt()
@@ -256,9 +268,31 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_DOWN) return true
-        val key = keys.firstOrNull { it.rect.contains(event.x, event.y) } ?: return true
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val key = keys.firstOrNull { it.rect.contains(event.x, event.y) } ?: return true
+                if (key.type == KeyType.SPACE) {
+                    spacePressed = true
+                    spaceLongPressTriggered = false
+                    handler.postDelayed(spaceLongPressRunnable, SPACE_LONG_PRESS_MS)
+                } else {
+                    dispatchKey(key)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (spacePressed) {
+                    handler.removeCallbacks(spaceLongPressRunnable)
+                    if (!spaceLongPressTriggered) {
+                        listener?.onSpace()
+                    }
+                    spacePressed = false
+                }
+            }
+        }
+        return true
+    }
 
+    private fun dispatchKey(key: KeyRect) {
         when (key.type) {
             KeyType.SPACE -> listener?.onSpace()
             KeyType.BACKSPACE -> listener?.onBackspace()
@@ -268,7 +302,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.PAUSE_RESUME -> listener?.onPauseResumeButton()
             KeyType.LETTER -> handleLetterTap(key.label)
         }
-        return true
     }
 
     private fun handleLetterTap(label: String) {
