@@ -21,4 +21,14 @@
         android:layout_weight="1"
         android:hint="متن جایگزین..." />
 
+    <Button
+        android:id="@+id/btnShowSavedTexts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="لیست"
+        android:textSize="12sp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingHorizontal="10dp" />
+
 </LinearLayout>
