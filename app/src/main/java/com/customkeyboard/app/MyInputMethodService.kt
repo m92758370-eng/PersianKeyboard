@@ -1,5 +1,6 @@
 package com.customkeyboard.app
 
+import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -74,6 +75,12 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         } else {
             Toast.makeText(this, "چیزی برای ادامه دادن نیست", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onWordShuffleButton() {
+        val intent = Intent(this, WordShuffleActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
     }
 
     private fun startAutoType() {
