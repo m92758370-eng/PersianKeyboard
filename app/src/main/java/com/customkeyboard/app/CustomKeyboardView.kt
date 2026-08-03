@@ -27,11 +27,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onSpaceLongPress()
         fun onAutoTypeButton()
         fun onPauseResumeButton()
+        fun onWordShuffleButton()
     }
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME }
+    private enum class KeyType { LETTER, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE }
 
     private data class KeyRect(
         val label: String,
@@ -222,14 +223,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bottomTop = rowHeight * letterRows.size
         val bottomBottom = bottomTop + rowHeight
-        val switchW = w * 0.13f
-        val pauseW = w * 0.12f
-        val autoW = w * 0.13f
-        val backW = w * 0.15f
-        val enterW = w * 0.15f
-        val spaceW = w - switchW - pauseW - autoW - backW - enterW
+        val shuffleW = w * 0.09f
+        val switchW = w * 0.12f
+        val pauseW = w * 0.11f
+        val autoW = w * 0.12f
+        val backW = w * 0.14f
+        val enterW = w * 0.14f
+        val spaceW = w - shuffleW - switchW - pauseW - autoW - backW - enterW
 
         var x = 0f
+        keys.add(KeyRect("⋮", RectF(x, bottomTop, x + shuffleW, bottomBottom), KeyType.WORD_SHUFFLE))
+        x += shuffleW
         keys.add(KeyRect(if (usePersian) "EN" else "فا", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
         x += switchW
         keys.add(KeyRect("▶", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
@@ -329,6 +333,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.LANG_SWITCH -> setLanguage(!usePersian)
             KeyType.AUTOTYPE -> listener?.onAutoTypeButton()
             KeyType.PAUSE_RESUME -> listener?.onPauseResumeButton()
+            KeyType.WORD_SHUFFLE -> listener?.onWordShuffleButton()
             KeyType.LETTER -> handleLetterTap(key.label)
         }
     }
