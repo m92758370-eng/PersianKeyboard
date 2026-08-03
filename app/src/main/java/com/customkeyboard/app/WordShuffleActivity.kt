@@ -28,6 +28,11 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var edtWordListName: EditText
     private lateinit var edtOutput: EditText
 
+    companion object {
+        private const val WORDS_PER_LINE = 12
+        private const val MIN_LINES = 80
+    }
+
     private val filePickerLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -48,6 +53,7 @@ class WordShuffleActivity : AppCompatActivity() {
         savedListsContainer = findViewById(R.id.savedListsContainer)
         edtWordListName = findViewById(R.id.edtWordListName)
         edtOutput = findViewById(R.id.edtOutput)
+        edtOutput.setLineSpacing(0f, 1.0f)
 
         findViewById<Button>(R.id.btnAddWord).setOnClickListener {
             val word = edtManualWord.text.toString().trim()
@@ -172,36 +178,37 @@ class WordShuffleActivity : AppCompatActivity() {
         val resultWords = mutableListOf<String>()
         val violationIndices = mutableSetOf<Int>()
 
-        val pool = currentWords.toMutableList()
-        pool.shuffle(Random(System.nanoTime()))
-
+        val minWordsNeeded = MIN_LINES * WORDS_PER_LINE
         var previous: String? = null
-        val remaining = pool.toMutableList()
+        val rnd = Random(System.nanoTime())
 
-        while (remaining.isNotEmpty()) {
-            var chosenIndex = -1
-            for (i in remaining.indices) {
-                val candidate = remaining[i]
-                val pairKey = if (previous != null) previous!! to candidate else null
-                if (pairKey == null || pairKey !in usedPairs) {
-                    chosenIndex = i
-                    break
+        while (resultWords.size < minWordsNeeded) {
+            val pool = currentWords.shuffled(rnd).toMutableList()
+            while (pool.isNotEmpty()) {
+                var chosenIndex = -1
+                for (i in pool.indices) {
+                    val candidate = pool[i]
+                    val pairKey = if (previous != null) previous!! to candidate else null
+                    if (pairKey == null || pairKey !in usedPairs) {
+                        chosenIndex = i
+                        break
+                    }
                 }
-            }
-            if (chosenIndex == -1) {
-                chosenIndex = 0
+                if (chosenIndex == -1) {
+                    chosenIndex = 0
+                    if (previous != null) {
+                        violationIndices.add(resultWords.size)
+                    }
+                }
+                val chosen = pool.removeAt(chosenIndex)
+                resultWords.add(chosen)
                 if (previous != null) {
-                    violationIndices.add(resultWords.size)
+                    val pairKey = previous!! to chosen
+                    usedPairs.add(pairKey)
+                    newPairsThisRun.add(pairKey)
                 }
+                previous = chosen
             }
-            val chosen = remaining.removeAt(chosenIndex)
-            resultWords.add(chosen)
-            if (previous != null) {
-                val pairKey = previous!! to chosen
-                usedPairs.add(pairKey)
-                newPairsThisRun.add(pairKey)
-            }
-            previous = chosen
         }
 
         PrefsHelper.addUsedPairs(this, newPairsThisRun)
@@ -215,11 +222,10 @@ class WordShuffleActivity : AppCompatActivity() {
                 builder.setSpan(ForegroundColorSpan(android.graphics.Color.RED), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 builder.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            if (index != resultWords.size - 1) {
-                builder.append(" ")
-            }
-            if ((index + 1) % 12 == 0) {
-                builder.append("\n")
+            val isLastWord = index == resultWords.size - 1
+            val isLineEnd = (index + 1) % WORDS_PER_LINE == 0
+            if (!isLastWord) {
+                builder.append(if (isLineEnd) "\n" else " ")
             }
         }
 
