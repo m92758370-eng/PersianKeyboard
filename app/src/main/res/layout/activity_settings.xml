@@ -39,6 +39,33 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="ابزارهای متنی"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:paddingBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnWordShuffle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ترکیب کلمات" />
+
+        <Button
+            android:id="@+id/btnTextReplace"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="حذف و جایگزینی کلمات" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginVertical="20dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="۲) متن اختصاصی هر حرف (با دوبار ضربه فعال می‌شود)"
             android:textStyle="bold"
             android:textSize="18sp"
