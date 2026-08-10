@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
     <application
         android:allowBackup="true"
@@ -23,6 +24,11 @@
             android:name=".WordShuffleActivity"
             android:exported="true"
             android:label="ترکیب کلمات" />
+
+        <activity
+            android:name=".TextReplaceActivity"
+            android:exported="true"
+            android:label="حذف و جایگزینی کلمات" />
 
         <service
             android:name=".MyInputMethodService"
