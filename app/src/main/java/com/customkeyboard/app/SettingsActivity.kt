@@ -33,6 +33,14 @@ class SettingsActivity : AppCompatActivity() {
             imm.showInputMethodPicker()
         }
 
+        findViewById<Button>(R.id.btnWordShuffle).setOnClickListener {
+            startActivity(Intent(this, WordShuffleActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btnTextReplace).setOnClickListener {
+            startActivity(Intent(this, TextReplaceActivity::class.java))
+        }
+
         buildLetterRows()
 
         autoTypeEditText = findViewById(R.id.autoTypeEditText)
