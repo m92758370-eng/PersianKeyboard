@@ -48,6 +48,8 @@ class WordShuffleActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_shuffle)
 
+        if (RemoteStatusHelper.blockIfDisabled(this)) return
+
         edtManualWord = findViewById(R.id.edtManualWord)
         txtWordCount = findViewById(R.id.txtWordCount)
         savedListsContainer = findViewById(R.id.savedListsContainer)
