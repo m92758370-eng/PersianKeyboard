@@ -27,6 +27,8 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        if (RemoteStatusHelper.blockIfDisabled(this)) return
+
         findViewById<Button>(R.id.btnEnableKeyboard).setOnClickListener {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
