@@ -1,6 +1,9 @@
 package com.customkeyboard.app
 
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -31,6 +34,10 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSwitchKeyboard).setOnClickListener {
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.showInputMethodPicker()
+        }
+
+        findViewById<Button>(R.id.btnShowDeviceId).setOnClickListener {
+            showDeviceIdDialog()
         }
 
         findViewById<Button>(R.id.btnWordShuffle).setOnClickListener {
@@ -65,6 +72,20 @@ class SettingsActivity : AppCompatActivity() {
             PrefsHelper.setAutoTypeDelayMs(this, delay)
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showDeviceIdDialog() {
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        AlertDialog.Builder(this)
+            .setTitle("شناسه این گوشی")
+            .setMessage(deviceId)
+            .setPositiveButton("کپی کن") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("device id", deviceId))
+                Toast.makeText(this, "کپی شد", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("بستن", null)
+            .show()
     }
 
     private fun updateSpeedLabel(delayMs: Long) {
