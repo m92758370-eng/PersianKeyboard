@@ -22,6 +22,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     override fun onCreateInputView(): View {
         keyboardView = CustomKeyboardView(this)
         keyboardView.listener = this
+        RemoteStatusHelper.refreshStatusAsync(this)
         return keyboardView
     }
 
@@ -34,29 +35,39 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         pauseAutoType()
     }
 
+    private fun isAllowed(): Boolean {
+        return RemoteStatusHelper.isEnabledCached(this)
+    }
+
     override fun onCommitText(text: String) {
+        if (!isAllowed()) return
         currentInputConnection?.commitText(text, 1)
     }
 
     override fun onBackspace() {
+        if (!isAllowed()) return
         currentInputConnection?.deleteSurroundingText(1, 0)
     }
 
     override fun onEnter() {
+        if (!isAllowed()) return
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
     }
 
     override fun onSpace() {
+        if (!isAllowed()) return
         currentInputConnection?.commitText(" ", 1)
     }
 
     override fun onSpaceLongPress() {
+        if (!isAllowed()) return
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showInputMethodPicker()
     }
 
     override fun onAutoTypeButton() {
+        if (!isAllowed()) return
         if (autoTypeRunning) {
             pauseAutoType()
             Toast.makeText(this, "تایپ خودکار متوقف شد", Toast.LENGTH_SHORT).show()
@@ -66,6 +77,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     }
 
     override fun onPauseResumeButton() {
+        if (!isAllowed()) return
         if (autoTypeRunning) {
             pauseAutoType()
             Toast.makeText(this, "تایپ خودکار متوقف شد", Toast.LENGTH_SHORT).show()
@@ -75,12 +87,6 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         } else {
             Toast.makeText(this, "چیزی برای ادامه دادن نیست", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    override fun onWordShuffleButton() {
-        val intent = Intent(this, WordShuffleActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
     }
 
     private fun startAutoType() {
@@ -103,6 +109,10 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     private fun scheduleNextChar() {
         if (!autoTypeRunning) return
+        if (!isAllowed()) {
+            pauseAutoType()
+            return
+        }
         if (autoTypeIndex >= autoTypeChars.size) {
             autoTypeRunning = false
             Toast.makeText(this, "تایپ خودکار تمام شد", Toast.LENGTH_SHORT).show()
