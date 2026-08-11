@@ -25,6 +25,8 @@ class TextReplaceActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_text_replace)
 
+        if (RemoteStatusHelper.blockIfDisabled(this)) return
+
         scrollRoot = findViewById(R.id.scrollRoot)
         edtSourceText = findViewById(R.id.edtSourceText)
         edtWordsToRemove = findViewById(R.id.edtWordsToRemove)
