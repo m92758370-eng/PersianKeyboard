@@ -30,6 +30,13 @@
             android:layout_marginTop="8dp"
             android:text="انتخاب این کیبورد به‌عنوان کیبورد فعال" />
 
+        <Button
+            android:id="@+id/btnShowDeviceId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="نمایش شناسه این گوشی" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
