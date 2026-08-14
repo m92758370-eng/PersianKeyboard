@@ -13,6 +13,7 @@ object PrefsHelper {
     private const val KEY_USED_PAIRS = "word_shuffle_used_pairs"
     private const val KEY_PARAGRAPHS = "word_shuffle_paragraphs"
     private const val KEY_LAST_WORD = "word_shuffle_last_word"
+    private const val KEY_BACKGROUND_URI = "keyboard_background_uri"
     private const val MAP_PREFIX = "map_"
     private const val WORDLIST_PREFIX = "wordlist_"
     private const val SEPARATOR = "\u0001"
@@ -151,6 +152,17 @@ object PrefsHelper {
     fun setLastWord(context: Context, word: String?) {
         val editor = prefs(context).edit()
         if (word == null) editor.remove(KEY_LAST_WORD) else editor.putString(KEY_LAST_WORD, word)
+        editor.apply()
+    }
+
+    // عکس دلخواهی که کاربر برای پس‌زمینه‌ی کیبورد از گالری انتخاب کرده (مثل قابلیت کیبورد شیائومی)
+    fun getBackgroundImageUri(context: Context): String? {
+        return prefs(context).getString(KEY_BACKGROUND_URI, null)
+    }
+
+    fun setBackgroundImageUri(context: Context, uri: String?) {
+        val editor = prefs(context).edit()
+        if (uri == null) editor.remove(KEY_BACKGROUND_URI) else editor.putString(KEY_BACKGROUND_URI, uri)
         editor.apply()
     }
 }
