@@ -11,7 +11,6 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.UnderlineSpan
 import android.text.style.ForegroundColorSpan
-import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -19,18 +18,16 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlin.random.Random
 
 class WordShuffleActivity : AppCompatActivity() {
 
     private val currentWords = mutableListOf<String>()
 
-    private lateinit var edtManualWord: EditText
-    private lateinit var txtWordCount: TextView
-    private lateinit var savedListsContainer: LinearLayout
-    private lateinit var edtWordListName: EditText
-    private lateinit var partsContainer: LinearLayout
-    private lateinit var txtParagraphCount: TextView
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: WordShuffleAdapter
 
     companion object {
         private const val WORDS_PER_PART = 700
@@ -56,23 +53,41 @@ class WordShuffleActivity : AppCompatActivity() {
 
         if (RemoteStatusHelper.blockIfDisabled(this)) return
 
-        edtManualWord = findViewById(R.id.edtManualWord)
-        txtWordCount = findViewById(R.id.txtWordCount)
-        savedListsContainer = findViewById(R.id.savedListsContainer)
-        edtWordListName = findViewById(R.id.edtWordListName)
-        partsContainer = findViewById(R.id.partsContainer)
-        txtParagraphCount = findViewById(R.id.txtParagraphCount)
+        recyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        adapter = WordShuffleAdapter(this)
+        recyclerView.adapter = adapter
+        // این باعث می‌شه چند تا ویو پارت از قبل آماده نگه داشته بشن تا اسکرول روون‌تر باشه
+        recyclerView.setItemViewCacheSize(6)
 
-        findViewById<Button>(R.id.btnAddWord).setOnClickListener {
-            val word = edtManualWord.text.toString().trim()
+        loadSavedParagraphsIntoAdapter()
+    }
+
+    private fun loadSavedParagraphsIntoAdapter() {
+        val paragraphs = PrefsHelper.getParagraphs(this)
+        adapter.partsData.clear()
+        // جدیدترین پارت (آخرین ایندکس) اول لیست قرار می‌گیره تا بالای صفحه دیده بشه
+        for (i in paragraphs.indices.reversed()) {
+            adapter.partsData.add((i + 1) to paragraphs[i])
+        }
+        adapter.notifyDataSetChanged()
+    }
+
+    // این تابع از داخل WordShuffleAdapter صدا زده می‌شه تا ردیف هدر (همه‌ی دکمه‌ها) پر بشه
+    fun bindHeader(holder: WordShuffleAdapter.HeaderViewHolder) {
+        holder.txtWordCount.text = "تعداد کلمات فعلی: ${currentWords.size}"
+        holder.txtParagraphCount.text = "پارت تولید شده: ${PrefsHelper.getParagraphs(this).size}"
+
+        holder.btnAddWord.setOnClickListener {
+            val word = holder.edtManualWord.text.toString().trim()
             if (word.isNotEmpty()) {
                 currentWords.add(word)
-                edtManualWord.setText("")
-                updateWordCount()
+                holder.edtManualWord.setText("")
+                holder.txtWordCount.text = "تعداد کلمات فعلی: ${currentWords.size}"
             }
         }
 
-        findViewById<Button>(R.id.btnPickFile).setOnClickListener {
+        holder.btnPickFile.setOnClickListener {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "text/plain"
@@ -80,14 +95,14 @@ class WordShuffleActivity : AppCompatActivity() {
             filePickerLauncher.launch(intent)
         }
 
-        findViewById<Button>(R.id.btnClearWords).setOnClickListener {
+        holder.btnClearWords.setOnClickListener {
             currentWords.clear()
-            updateWordCount()
+            holder.txtWordCount.text = "تعداد کلمات فعلی: ${currentWords.size}"
             Toast.makeText(this, "لیست فعلی پاک شد", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<Button>(R.id.btnSaveWordList).setOnClickListener {
-            val name = edtWordListName.text.toString().trim()
+        holder.btnSaveWordList.setOnClickListener {
+            val name = holder.edtWordListName.text.toString().trim()
             if (name.isEmpty()) {
                 Toast.makeText(this, "اول یه اسم برای لیست بنویس", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -97,15 +112,16 @@ class WordShuffleActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             PrefsHelper.saveWordList(this, name, currentWords.toList())
-            edtWordListName.setText("")
+            holder.edtWordListName.setText("")
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
-            refreshSavedListsUI()
+            refreshSavedListsUI(holder.savedListsContainer)
         }
 
-        findViewById<Button>(R.id.btnCombineSelected).setOnClickListener {
+        holder.btnCombineSelected.setOnClickListener {
             var added = 0
-            for (i in 0 until savedListsContainer.childCount) {
-                val row = savedListsContainer.getChildAt(i)
+            val container = holder.savedListsContainer
+            for (i in 0 until container.childCount) {
+                val row = container.getChildAt(i)
                 val checkBox = row.findViewById<CheckBox>(R.id.checkboxWordList)
                 val name = row.tag as? String ?: continue
                 if (checkBox.isChecked) {
@@ -114,33 +130,48 @@ class WordShuffleActivity : AppCompatActivity() {
                     added += words.size
                 }
             }
-            updateWordCount()
+            holder.txtWordCount.text = "تعداد کلمات فعلی: ${currentWords.size}"
             Toast.makeText(this, "$added کلمه اضافه شد", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<Button>(R.id.btnGenerate).setOnClickListener {
-            generateNextParagraph()
+        holder.btnGenerate.setOnClickListener {
+            generateNextParagraph(holder)
         }
 
-        findViewById<Button>(R.id.btnResetProgress).setOnClickListener {
+        holder.btnResetProgress.setOnClickListener {
             PrefsHelper.clearParagraphs(this)
-            partsContainer.removeAllViews()
-            updateParagraphCount()
+            adapter.partsData.clear()
+            adapter.notifyDataSetChanged()
+            holder.txtParagraphCount.text = "پارت تولید شده: 0"
             Toast.makeText(this, "پیشرفت پاک شد", Toast.LENGTH_SHORT).show()
         }
 
-        refreshSavedListsUI()
-        updateWordCount()
-        loadSavedParagraphs()
+        refreshSavedListsUI(holder.savedListsContainer)
     }
 
-    private fun loadSavedParagraphs() {
-        partsContainer.removeAllViews()
-        val paragraphs = PrefsHelper.getParagraphs(this)
-        for ((index, marked) in paragraphs.withIndex()) {
-            addPartView(index + 1, marked)
+    // این تابع از داخل WordShuffleAdapter صدا زده می‌شه تا یه کارت پارت پر بشه
+    fun bindPart(holder: WordShuffleAdapter.PartViewHolder, partNumber: Int, marked: String) {
+        holder.txtPartLabel.text = "پارت $partNumber"
+        holder.edtPartText.setText(buildSpannable(marked), TextView.BufferType.SPANNABLE)
+
+        // وقتی از روی این پارت فوکوس برداشته می‌شه (یعنی کاربر احتمالاً چیزی اصلاح کرده)، ذخیره می‌کنیم
+        holder.edtPartText.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val newPlain = holder.edtPartText.text.toString()
+                PrefsHelper.updateParagraph(this, partNumber - 1, newPlain)
+                val idx = adapter.partsData.indexOfFirst { it.first == partNumber }
+                if (idx != -1) {
+                    adapter.partsData[idx] = partNumber to newPlain
+                }
+            }
         }
-        updateParagraphCount()
+
+        holder.btnCopyPart.setOnClickListener {
+            val plainText = holder.edtPartText.text.toString()
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("پارت $partNumber", plainText))
+            Toast.makeText(this, "پارت $partNumber کپی شد", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // متن هر پارت رو با نشونه‌های MARK دور کلمات تکراری تبدیل به یه Spannable قرمز/زیرخط‌دار می‌کنه
@@ -160,36 +191,13 @@ class WordShuffleActivity : AppCompatActivity() {
         return builder
     }
 
-    // یه کارت کوچیک برای یه پارت می‌سازه: شماره پارت + دکمه کپی مخصوص همون پارت + متن قابل ویرایش
-    private fun addPartView(partNumber: Int, marked: String) {
-        val view = layoutInflater.inflate(R.layout.item_word_shuffle_part, partsContainer, false)
-        view.findViewById<TextView>(R.id.txtPartLabel).text = "پارت $partNumber"
-
-        val edtPart = view.findViewById<EditText>(R.id.edtPartText)
-        edtPart.setText(buildSpannable(marked), TextView.BufferType.SPANNABLE)
-
-        view.findViewById<Button>(R.id.btnCopyPart).setOnClickListener {
-            val plainText = edtPart.text.toString()
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("پارت $partNumber", plainText))
-            Toast.makeText(this, "پارت $partNumber کپی شد", Toast.LENGTH_SHORT).show()
-        }
-
-        partsContainer.addView(view)
-    }
-
-    private fun updateParagraphCount() {
-        val count = PrefsHelper.getParagraphs(this).size
-        txtParagraphCount.text = "پارت تولید شده: $count"
-    }
-
     private fun loadWordsFromUri(uri: Uri) {
         try {
             contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
                 val text = reader.readText()
                 val words = text.split(Regex("[\\s,]+")).filter { it.isNotBlank() }
                 currentWords.addAll(words)
-                updateWordCount()
+                adapter.notifyItemChanged(0)
                 Toast.makeText(this, "${words.size} کلمه بارگذاری شد", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
@@ -197,12 +205,8 @@ class WordShuffleActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateWordCount() {
-        txtWordCount.text = "تعداد کلمات فعلی: ${currentWords.size}"
-    }
-
-    private fun refreshSavedListsUI() {
-        savedListsContainer.removeAllViews()
+    private fun refreshSavedListsUI(container: LinearLayout) {
+        container.removeAllViews()
         val names = PrefsHelper.getWordListNames(this)
         for (name in names) {
             val row = LinearLayout(this).apply {
@@ -222,17 +226,17 @@ class WordShuffleActivity : AppCompatActivity() {
                 textSize = 12f
                 setOnClickListener {
                     PrefsHelper.deleteWordList(this@WordShuffleActivity, name)
-                    refreshSavedListsUI()
+                    refreshSavedListsUI(container)
                 }
             }
             row.addView(checkBox)
             row.addView(label)
             row.addView(deleteBtn)
-            savedListsContainer.addView(row)
+            container.addView(row)
         }
     }
 
-    private fun generateNextParagraph() {
+    private fun generateNextParagraph(holder: WordShuffleAdapter.HeaderViewHolder) {
         if (currentWords.size < 2) {
             Toast.makeText(this, "حداقل ۲ کلمه لازمه", Toast.LENGTH_SHORT).show()
             return
@@ -295,7 +299,12 @@ class WordShuffleActivity : AppCompatActivity() {
 
         PrefsHelper.addParagraph(this, markedText)
         val partNumber = PrefsHelper.getParagraphs(this).size
-        addPartView(partNumber, markedText)
-        updateParagraphCount()
+
+        // پارت جدید همیشه اول لیست (بالای صفحه) اضافه می‌شه، پارت‌های قبلی پایین می‌رن
+        adapter.partsData.add(0, partNumber to markedText)
+        adapter.notifyItemInserted(1) // آیتم 0 هدره، پس پارت جدید می‌شه آیتم 1
+        recyclerView.scrollToPosition(0)
+
+        holder.txtParagraphCount.text = "پارت تولید شده: ${PrefsHelper.getParagraphs(this).size}"
     }
 }
