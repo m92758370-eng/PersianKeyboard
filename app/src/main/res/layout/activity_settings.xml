@@ -46,6 +46,40 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="پس‌زمینه کیبورد"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/txtBackgroundStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="الان پیش‌فرضه (بدون عکس دلخواه)" />
+
+        <Button
+            android:id="@+id/btnPickBackground"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="انتخاب عکس دلخواه از گالری" />
+
+        <Button
+            android:id="@+id/btnResetBackground"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="برگشت به پس‌زمینه پیش‌فرض" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginVertical="20dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="ابزارهای متنی"
             android:textStyle="bold"
             android:textSize="18sp"
