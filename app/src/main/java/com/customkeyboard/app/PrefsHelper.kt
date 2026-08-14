@@ -11,6 +11,8 @@ object PrefsHelper {
     private const val KEY_SAVED_TEXTS = "saved_texts"
     private const val KEY_WORDLIST_NAMES = "wordlist_names"
     private const val KEY_USED_PAIRS = "word_shuffle_used_pairs"
+    private const val KEY_PARAGRAPHS = "word_shuffle_paragraphs"
+    private const val KEY_LAST_WORD = "word_shuffle_last_word"
     private const val MAP_PREFIX = "map_"
     private const val WORDLIST_PREFIX = "wordlist_"
     private const val SEPARATOR = "\u0001"
@@ -114,5 +116,30 @@ object PrefsHelper {
 
     fun clearUsedPairs(context: Context) {
         prefs(context).edit().remove(KEY_USED_PAIRS).apply()
+    }
+
+    fun getParagraphs(context: Context): List<String> {
+        val raw = prefs(context).getString(KEY_PARAGRAPHS, "") ?: ""
+        return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR).filter { it.isNotEmpty() }
+    }
+
+    fun addParagraph(context: Context, text: String) {
+        val current = getParagraphs(context).toMutableList()
+        current.add(text)
+        prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
+    }
+
+    fun clearParagraphs(context: Context) {
+        prefs(context).edit().remove(KEY_PARAGRAPHS).remove(KEY_LAST_WORD).apply()
+    }
+
+    fun getLastWord(context: Context): String? {
+        return prefs(context).getString(KEY_LAST_WORD, null)
+    }
+
+    fun setLastWord(context: Context, word: String?) {
+        val editor = prefs(context).edit()
+        if (word == null) editor.remove(KEY_LAST_WORD) else editor.putString(KEY_LAST_WORD, word)
+        editor.apply()
     }
 }
