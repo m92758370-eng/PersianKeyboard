@@ -150,15 +150,12 @@
             android:text="نتیجه (کلمات با خط قرمز رو می‌تونی دستی اصلاح کنی):"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/edtOutput"
+        <LinearLayout
+            android:id="@+id/partsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minLines="10"
-            android:gravity="top|start"
-            android:layout_marginTop="8dp"
-            android:background="#11000000"
-            android:padding="8dp" />
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
 
