@@ -1,6 +1,7 @@
 package com.customkeyboard.app
 
 import android.app.AlertDialog
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -22,6 +23,28 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var speedLabel: TextView
     private lateinit var speedSeekBar: SeekBar
     private lateinit var autoTypeEditText: EditText
+    private lateinit var txtBackgroundStatus: TextView
+
+    private val backgroundPickerLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.data
+            if (uri != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    // بعضی گوشی‌ها اجازه‌ی دائمی نمی‌دن، اشکالی نداره، فعلاً همچنان کار می‌کنه
+                }
+                PrefsHelper.setBackgroundImageUri(this, uri.toString())
+                updateBackgroundStatus()
+                Toast.makeText(this, "پس‌زمینه ذخیره شد", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +75,23 @@ class SettingsActivity : AppCompatActivity() {
 
         buildLetterRows()
 
+        txtBackgroundStatus = findViewById(R.id.txtBackgroundStatus)
+        updateBackgroundStatus()
+
+        findViewById<Button>(R.id.btnPickBackground).setOnClickListener {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/*"
+            }
+            backgroundPickerLauncher.launch(intent)
+        }
+
+        findViewById<Button>(R.id.btnResetBackground).setOnClickListener {
+            PrefsHelper.setBackgroundImageUri(this, null)
+            updateBackgroundStatus()
+            Toast.makeText(this, "پس‌زمینه پیش‌فرض برگشت", Toast.LENGTH_SHORT).show()
+        }
+
         autoTypeEditText = findViewById(R.id.autoTypeEditText)
         autoTypeEditText.setText(PrefsHelper.getAutoTypeText(this))
 
@@ -73,6 +113,15 @@ class SettingsActivity : AppCompatActivity() {
             val delay = PrefsHelper.MIN_DELAY_MS + speedSeekBar.progress
             PrefsHelper.setAutoTypeDelayMs(this, delay)
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateBackgroundStatus() {
+        val uri = PrefsHelper.getBackgroundImageUri(this)
+        txtBackgroundStatus.text = if (uri != null) {
+            "یه عکس دلخواه انتخاب شده ✓"
+        } else {
+            "الان پیش‌فرضه (بدون عکس دلخواه)"
         }
     }
 
