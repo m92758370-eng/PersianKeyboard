@@ -27,10 +27,10 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var savedListsContainer: LinearLayout
     private lateinit var edtWordListName: EditText
     private lateinit var edtOutput: EditText
+    private lateinit var txtParagraphCount: TextView
 
     companion object {
         private const val WORDS_PER_LINE = 12
-        private const val MIN_LINES = 80
     }
 
     private val filePickerLauncher = registerForActivityResult(
@@ -56,6 +56,7 @@ class WordShuffleActivity : AppCompatActivity() {
         edtWordListName = findViewById(R.id.edtWordListName)
         edtOutput = findViewById(R.id.edtOutput)
         edtOutput.setLineSpacing(0f, 1.0f)
+        txtParagraphCount = findViewById(R.id.txtParagraphCount)
 
         findViewById<Button>(R.id.btnAddWord).setOnClickListener {
             val word = edtManualWord.text.toString().trim()
@@ -113,11 +114,33 @@ class WordShuffleActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnGenerate).setOnClickListener {
-            generateParagraph()
+            generateNextParagraph()
+        }
+
+        findViewById<Button>(R.id.btnResetProgress).setOnClickListener {
+            PrefsHelper.clearParagraphs(this)
+            edtOutput.setText("")
+            updateParagraphCount()
+            Toast.makeText(this, "پیشرفت پاک شد", Toast.LENGTH_SHORT).show()
         }
 
         refreshSavedListsUI()
         updateWordCount()
+        loadSavedParagraphs()
+    }
+
+    private fun loadSavedParagraphs() {
+        val paragraphs = PrefsHelper.getParagraphs(this)
+        if (paragraphs.isNotEmpty()) {
+            edtOutput.setText(paragraphs.joinToString("\n\n"))
+            edtOutput.setSelection(edtOutput.text.length)
+        }
+        updateParagraphCount()
+    }
+
+    private fun updateParagraphCount() {
+        val count = PrefsHelper.getParagraphs(this).size
+        txtParagraphCount.text = "پاراگراف تولید شده: $count"
     }
 
     private fun loadWordsFromUri(uri: Uri) {
@@ -169,7 +192,7 @@ class WordShuffleActivity : AppCompatActivity() {
         }
     }
 
-    private fun generateParagraph() {
+    private fun generateNextParagraph() {
         if (currentWords.size < 2) {
             Toast.makeText(this, "حداقل ۲ کلمه لازمه", Toast.LENGTH_SHORT).show()
             return
@@ -180,13 +203,12 @@ class WordShuffleActivity : AppCompatActivity() {
         val resultWords = mutableListOf<String>()
         val violationIndices = mutableSetOf<Int>()
 
-        val minWordsNeeded = MIN_LINES * WORDS_PER_LINE
-        var previous: String? = null
+        var previous: String? = PrefsHelper.getLastWord(this)
         val rnd = Random(System.nanoTime())
 
-        while (resultWords.size < minWordsNeeded) {
+        while (resultWords.size < WORDS_PER_LINE) {
             val pool = currentWords.shuffled(rnd).toMutableList()
-            while (pool.isNotEmpty()) {
+            while (pool.isNotEmpty() && resultWords.size < WORDS_PER_LINE) {
                 var chosenIndex = -1
                 for (i in pool.indices) {
                     val candidate = pool[i]
@@ -214,6 +236,7 @@ class WordShuffleActivity : AppCompatActivity() {
         }
 
         PrefsHelper.addUsedPairs(this, newPairsThisRun)
+        PrefsHelper.setLastWord(this, previous)
 
         val builder = SpannableStringBuilder()
         for ((index, word) in resultWords.withIndex()) {
@@ -224,13 +247,18 @@ class WordShuffleActivity : AppCompatActivity() {
                 builder.setSpan(ForegroundColorSpan(android.graphics.Color.RED), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 builder.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            val isLastWord = index == resultWords.size - 1
-            val isLineEnd = (index + 1) % WORDS_PER_LINE == 0
-            if (!isLastWord) {
-                builder.append(if (isLineEnd) "\n" else " ")
+            if (index != resultWords.size - 1) {
+                builder.append(" ")
             }
         }
 
-        edtOutput.setText(builder)
+        PrefsHelper.addParagraph(this, builder.toString())
+
+        if (edtOutput.text.isNotEmpty()) {
+            edtOutput.append("\n\n")
+        }
+        edtOutput.append(builder)
+        edtOutput.setSelection(edtOutput.text.length)
+        updateParagraphCount()
     }
 }
