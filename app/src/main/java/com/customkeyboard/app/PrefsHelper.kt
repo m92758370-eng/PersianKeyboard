@@ -129,6 +129,17 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
     }
 
+    // برای وقتی که کاربر متن یه پارت خاص رو دستی اصلاح می‌کنه (مثلاً کلمات قرمز رو درست می‌کنه)
+    fun updateParagraph(context: Context, index: Int, newText: String) {
+        val current = getParagraphs(context).toMutableList()
+        if (index in current.indices) {
+            // اگه کاربر کل متن پارت رو پاک کنه، به‌جای رشته‌ی خالی یه فاصله می‌ذاریم
+            // وگرنه دفعه‌ی بعد که خونده می‌شه فیلتر می‌شه و شماره‌ی پارت‌های بعدی به‌هم می‌ریزه
+            current[index] = if (newText.isEmpty()) " " else newText
+            prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
+        }
+    }
+
     fun clearParagraphs(context: Context) {
         prefs(context).edit().remove(KEY_PARAGRAPHS).remove(KEY_LAST_WORD).apply()
     }
