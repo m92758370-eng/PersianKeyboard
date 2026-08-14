@@ -1,6 +1,9 @@
 package com.customkeyboard.app
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -26,11 +29,14 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var txtWordCount: TextView
     private lateinit var savedListsContainer: LinearLayout
     private lateinit var edtWordListName: EditText
-    private lateinit var edtOutput: EditText
+    private lateinit var partsContainer: LinearLayout
     private lateinit var txtParagraphCount: TextView
 
     companion object {
         private const val WORDS_PER_PART = 700
+        // این کاراکتر نامرئی دور کلمه‌های تکراری (خط قرمز) رو تو متن ذخیره‌شده مشخص می‌کنه
+        // تا بعد از بستن و باز کردن دوباره‌ی صفحه هم علامت قرمزها از بین نره
+        private const val MARK = "\u0004"
     }
 
     private val filePickerLauncher = registerForActivityResult(
@@ -54,8 +60,7 @@ class WordShuffleActivity : AppCompatActivity() {
         txtWordCount = findViewById(R.id.txtWordCount)
         savedListsContainer = findViewById(R.id.savedListsContainer)
         edtWordListName = findViewById(R.id.edtWordListName)
-        edtOutput = findViewById(R.id.edtOutput)
-        edtOutput.setLineSpacing(0f, 1.0f)
+        partsContainer = findViewById(R.id.partsContainer)
         txtParagraphCount = findViewById(R.id.txtParagraphCount)
 
         findViewById<Button>(R.id.btnAddWord).setOnClickListener {
@@ -119,7 +124,7 @@ class WordShuffleActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnResetProgress).setOnClickListener {
             PrefsHelper.clearParagraphs(this)
-            edtOutput.setText("")
+            partsContainer.removeAllViews()
             updateParagraphCount()
             Toast.makeText(this, "پیشرفت پاک شد", Toast.LENGTH_SHORT).show()
         }
@@ -130,12 +135,47 @@ class WordShuffleActivity : AppCompatActivity() {
     }
 
     private fun loadSavedParagraphs() {
+        partsContainer.removeAllViews()
         val paragraphs = PrefsHelper.getParagraphs(this)
-        if (paragraphs.isNotEmpty()) {
-            edtOutput.setText(paragraphs.joinToString("\n\n"))
-            edtOutput.setSelection(edtOutput.text.length)
+        for ((index, marked) in paragraphs.withIndex()) {
+            addPartView(index + 1, marked)
         }
         updateParagraphCount()
+    }
+
+    // متن هر پارت رو با نشونه‌های MARK دور کلمات تکراری تبدیل به یه Spannable قرمز/زیرخط‌دار می‌کنه
+    private fun buildSpannable(marked: String): SpannableStringBuilder {
+        val builder = SpannableStringBuilder()
+        val segments = marked.split(MARK)
+        for ((i, segment) in segments.withIndex()) {
+            val start = builder.length
+            builder.append(segment)
+            val end = builder.length
+            val isViolation = i % 2 == 1
+            if (isViolation) {
+                builder.setSpan(ForegroundColorSpan(android.graphics.Color.RED), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                builder.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        return builder
+    }
+
+    // یه کارت کوچیک برای یه پارت می‌سازه: شماره پارت + دکمه کپی مخصوص همون پارت + متن قابل ویرایش
+    private fun addPartView(partNumber: Int, marked: String) {
+        val view = layoutInflater.inflate(R.layout.item_word_shuffle_part, partsContainer, false)
+        view.findViewById<TextView>(R.id.txtPartLabel).text = "پارت $partNumber"
+
+        val edtPart = view.findViewById<EditText>(R.id.edtPartText)
+        edtPart.setText(buildSpannable(marked), TextView.BufferType.SPANNABLE)
+
+        view.findViewById<Button>(R.id.btnCopyPart).setOnClickListener {
+            val plainText = edtPart.text.toString()
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("پارت $partNumber", plainText))
+            Toast.makeText(this, "پارت $partNumber کپی شد", Toast.LENGTH_SHORT).show()
+        }
+
+        partsContainer.addView(view)
     }
 
     private fun updateParagraphCount() {
@@ -239,27 +279,23 @@ class WordShuffleActivity : AppCompatActivity() {
         PrefsHelper.addUsedPairs(this, newPairsThisRun)
         PrefsHelper.setLastWord(this, previous)
 
-        val builder = SpannableStringBuilder()
+        // به‌جای Spannable موقتی، یه متن ساده با نشونه‌ی MARK دور کلمات تکراری می‌سازیم
+        // که قابل ذخیره‌سازیه و بعد از بستن برنامه هم خط قرمزها از بین نمی‌ره
+        val markedBuilder = StringBuilder()
         for ((index, word) in resultWords.withIndex()) {
-            val start = builder.length
-            builder.append(word)
-            val end = builder.length
-            if (index in violationIndices) {
-                builder.setSpan(ForegroundColorSpan(android.graphics.Color.RED), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                builder.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
+            val isViolation = index in violationIndices
+            if (isViolation) markedBuilder.append(MARK)
+            markedBuilder.append(word)
+            if (isViolation) markedBuilder.append(MARK)
             if (index != resultWords.size - 1) {
-                builder.append(" ")
+                markedBuilder.append(" ")
             }
         }
+        val markedText = markedBuilder.toString()
 
-        PrefsHelper.addParagraph(this, builder.toString())
-
-        if (edtOutput.text.isNotEmpty()) {
-            edtOutput.append("\n\n")
-        }
-        edtOutput.append(builder)
-        edtOutput.setSelection(edtOutput.text.length)
+        PrefsHelper.addParagraph(this, markedText)
+        val partNumber = PrefsHelper.getParagraphs(this).size
+        addPartView(partNumber, markedText)
         updateParagraphCount()
     }
 }
