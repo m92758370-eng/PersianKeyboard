@@ -127,14 +127,14 @@
             android:id="@+id/btnGenerate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="تولید پاراگراف بعدی" />
+            android:text="تولید پارت بعدی" />
 
         <TextView
             android:id="@+id/txtParagraphCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="پاراگراف تولید شده: 0" />
+            android:text="پارت تولید شده: 0" />
 
         <Button
             android:id="@+id/btnResetProgress"
