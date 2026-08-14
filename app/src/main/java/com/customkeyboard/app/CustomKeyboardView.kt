@@ -9,6 +9,7 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -129,6 +130,23 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundW = w
         backgroundH = h
 
+        // اول ببین کاربر خودش عکس دلخواهی از گالری انتخاب کرده یا نه (مثل کیبورد شیائومی)
+        val customUriString = PrefsHelper.getBackgroundImageUri(context)
+        if (customUriString != null) {
+            try {
+                val uri = Uri.parse(customUriString)
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val original = BitmapFactory.decodeStream(stream)
+                    if (original != null) {
+                        backgroundBitmap = centerCrop(original, w, h)
+                        return
+                    }
+                }
+            } catch (e: Exception) {
+                // اگه عکس دلخواه به هر دلیلی لود نشد (مثلاً دسترسیش گرفته شده)، میریم سراغ پیش‌فرض
+            }
+        }
+
         val resId = resources.getIdentifier("keyboard_background", "drawable", context.packageName)
         backgroundBitmap = if (resId != 0) {
             val original = BitmapFactory.decodeResource(resources, resId)
@@ -136,6 +154,16 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         } else {
             generateGrungeTexture(w, h)
         }
+    }
+
+    // وقتی کاربر از تنظیمات عکس پس‌زمینه رو عوض می‌کنه، این تابع باعث می‌شه دفعه‌ی بعد که
+    // کیبورد باز می‌شه، عکس جدید لود بشه (چون قبلاً یه‌بار لود شده و کش شده بود)
+    fun refreshBackground() {
+        backgroundBitmap = null
+        backgroundW = -1
+        backgroundH = -1
+        loadBackground(width, height)
+        invalidate()
     }
 
     private fun centerCrop(src: Bitmap, targetW: Int, targetH: Int): Bitmap {
