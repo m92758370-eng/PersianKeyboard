@@ -264,9 +264,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += shuffleW
         keys.add(KeyRect(if (usePersian) "EN" else "فا", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
         x += switchW
-        keys.add(KeyRect("▶", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
+        keys.add(KeyRect("◀▶", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
         x += pauseW
-        keys.add(KeyRect("▶", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
+        keys.add(KeyRect("🙂", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
         keys.add(KeyRect("کینگ آنتونی", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
