@@ -30,6 +30,11 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         return false
     }
 
+    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
+        super.onStartInputView(info, restarting)
+        keyboardView.refreshBackground()
+    }
+
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         pauseAutoType()
