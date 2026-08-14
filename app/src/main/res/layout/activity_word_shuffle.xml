@@ -127,7 +127,21 @@
             android:id="@+id/btnGenerate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="تولید پاراگراف" />
+            android:text="تولید پاراگراف بعدی" />
+
+        <TextView
+            android:id="@+id/txtParagraphCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="پاراگراف تولید شده: 0" />
+
+        <Button
+            android:id="@+id/btnResetProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="شروع از اول (پاک کردن پیشرفت)" />
 
         <TextView
             android:layout_width="wrap_content"
