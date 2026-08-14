@@ -30,7 +30,7 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var txtParagraphCount: TextView
 
     companion object {
-        private const val WORDS_PER_LINE = 12
+        private const val WORDS_PER_PART = 700
     }
 
     private val filePickerLauncher = registerForActivityResult(
@@ -140,7 +140,7 @@ class WordShuffleActivity : AppCompatActivity() {
 
     private fun updateParagraphCount() {
         val count = PrefsHelper.getParagraphs(this).size
-        txtParagraphCount.text = "پاراگراف تولید شده: $count"
+        txtParagraphCount.text = "پارت تولید شده: $count"
     }
 
     private fun loadWordsFromUri(uri: Uri) {
@@ -203,12 +203,13 @@ class WordShuffleActivity : AppCompatActivity() {
         val resultWords = mutableListOf<String>()
         val violationIndices = mutableSetOf<Int>()
 
+        // ادامه از آخرین کلمه‌ی پارت قبلی (حتی اگه از جلسه‌ی قبل باشه)
         var previous: String? = PrefsHelper.getLastWord(this)
         val rnd = Random(System.nanoTime())
 
-        while (resultWords.size < WORDS_PER_LINE) {
+        while (resultWords.size < WORDS_PER_PART) {
             val pool = currentWords.shuffled(rnd).toMutableList()
-            while (pool.isNotEmpty() && resultWords.size < WORDS_PER_LINE) {
+            while (pool.isNotEmpty() && resultWords.size < WORDS_PER_PART) {
                 var chosenIndex = -1
                 for (i in pool.indices) {
                     val candidate = pool[i]
