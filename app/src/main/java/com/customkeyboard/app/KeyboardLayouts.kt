@@ -5,7 +5,7 @@ object KeyboardLayouts {
     val PERSIAN: List<List<String>> = listOf(
         listOf("ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "چ"),
         listOf("ش", "س", "ی", "ب", "ل", "ا", "ت", "ن", "م", "ک", "گ"),
-        listOf("ظ", "ط", "ز", "ر", "ذ", "د", "پ", "و", ".", ",")
+        listOf("ظ", "ط", "ژ", "ز", "ر", "ذ", "د", "پ", "و", "چ")
     )
 
     val ENGLISH: List<List<String>> = listOf(
