@@ -91,6 +91,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var highlightedLabel: String? = null
 
     private var spacePressed = false
+    private var spacePointerId = -1
     private var spaceLongPressTriggered = false
     private val spaceLongPressRunnable = Runnable {
         spaceLongPressTriggered = true
@@ -98,6 +99,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private var backspacePressed = false
+    private var backspacePointerId = -1
     private var backspaceRepeatCount = 0
     private val backspaceRunnable = object : Runnable {
         override fun run() {
@@ -319,17 +321,24 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                val key = keys.firstOrNull { it.rect.contains(event.x, event.y) } ?: return true
+        val actionIndex = event.actionIndex
+        val x = event.getX(actionIndex)
+        val y = event.getY(actionIndex)
+        val pointerId = event.getPointerId(actionIndex)
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val key = keys.firstOrNull { it.rect.contains(x, y) } ?: return true
                 when (key.type) {
                     KeyType.SPACE -> {
                         spacePressed = true
+                        spacePointerId = pointerId
                         spaceLongPressTriggered = false
                         handler.postDelayed(spaceLongPressRunnable, SPACE_LONG_PRESS_MS)
                     }
                     KeyType.BACKSPACE -> {
                         backspacePressed = true
+                        backspacePointerId = pointerId
                         backspaceRepeatCount = 0
                         listener?.onBackspace()
                         handler.postDelayed(backspaceRunnable, BACKSPACE_INITIAL_DELAY_MS)
@@ -337,12 +346,22 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     else -> dispatchKey(key)
                 }
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                if (spacePressed) {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                if (spacePressed && pointerId == spacePointerId) {
                     handler.removeCallbacks(spaceLongPressRunnable)
                     if (!spaceLongPressTriggered) {
                         listener?.onSpace()
                     }
+                    spacePressed = false
+                }
+                if (backspacePressed && pointerId == backspacePointerId) {
+                    handler.removeCallbacks(backspaceRunnable)
+                    backspacePressed = false
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                if (spacePressed) {
+                    handler.removeCallbacks(spaceLongPressRunnable)
                     spacePressed = false
                 }
                 if (backspacePressed) {
