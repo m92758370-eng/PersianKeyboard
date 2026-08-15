@@ -266,7 +266,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += switchW
         keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
         x += pauseW
-        keys.add(KeyRect("🙂", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
+        keys.add(KeyRect("", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
         keys.add(KeyRect("کینگ آنتونی", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
@@ -307,6 +307,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 canvas.drawText(key.label, cx, cy, spaceTextPaint)
             } else if (key.type == KeyType.PAUSE_RESUME) {
                 drawArrowIcon(canvas, key.rect)
+            } else if (key.type == KeyType.AUTOTYPE) {
+                drawSmileyIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -416,6 +418,37 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             close()
         }
         canvas.drawPath(rightPath, arrowIconPaint)
+    }
+
+    private val smileyStrokePaint = Paint().apply {
+        color = Color.WHITE
+        isAntiAlias = true
+        style = Paint.Style.STROKE
+        strokeWidth = 2.2f
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val smileyDotPaint = Paint().apply {
+        color = Color.WHITE
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    private fun drawSmileyIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val r = rowHeight * 0.17f
+
+        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
+
+        val eyeR = r * 0.11f
+        val eyeOffsetX = r * 0.38f
+        val eyeOffsetY = r * 0.22f
+        canvas.drawCircle(cx - eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
+        canvas.drawCircle(cx + eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
+
+        val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
+        canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
     }
 
     private fun handleLetterTap(label: String) {
