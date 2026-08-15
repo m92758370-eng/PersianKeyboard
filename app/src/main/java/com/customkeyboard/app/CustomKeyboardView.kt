@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
@@ -81,6 +82,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private var rowHeight = 0f
+    private val density = context.resources.displayMetrics.density
     private var backgroundBitmap: Bitmap? = null
     private var backgroundW = -1
     private var backgroundH = -1
@@ -130,7 +132,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundW = w
         backgroundH = h
 
-        // اول ببین کاربر خودش عکس دلخواهی از گالری انتخاب کرده یا نه (مثل کیبورد شیائومی)
         val customUriString = PrefsHelper.getBackgroundImageUri(context)
         if (customUriString != null) {
             try {
@@ -143,7 +144,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     }
                 }
             } catch (e: Exception) {
-                // اگه عکس دلخواه به هر دلیلی لود نشد (مثلاً دسترسیش گرفته شده)، میریم سراغ پیش‌فرض
             }
         }
 
@@ -156,8 +156,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
     }
 
-    // وقتی کاربر از تنظیمات عکس پس‌زمینه رو عوض می‌کنه، این تابع باعث می‌شه دفعه‌ی بعد که
-    // کیبورد باز می‌شه، عکس جدید لود بشه (چون قبلاً یه‌بار لود شده و کش شده بود)
     fun refreshBackground() {
         backgroundBitmap = null
         backgroundW = -1
@@ -264,7 +262,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += shuffleW
         keys.add(KeyRect(if (usePersian) "EN" else "فا", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
         x += switchW
-        keys.add(KeyRect("◀▶", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
+        keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
         x += pauseW
         keys.add(KeyRect("🙂", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
@@ -291,10 +289,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.type == KeyType.LETTER -> keyPaint
                 else -> specialKeyPaint
             }
-            val pad = 3f
+            val pad = 4f * density
+            val corner = 14f * density
             canvas.drawRoundRect(
                 RectF(key.rect.left + pad, key.rect.top + pad, key.rect.right - pad, key.rect.bottom - pad),
-                10f, 10f, paint
+                corner, corner, paint
             )
             val cx = key.rect.centerX()
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
@@ -304,6 +303,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     textSize = rowHeight * 0.22f
                 }
                 canvas.drawText(key.label, cx, cy, spaceTextPaint)
+            } else if (key.type == KeyType.PAUSE_RESUME) {
+                drawArrowIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -364,6 +365,38 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.WORD_SHUFFLE -> listener?.onWordShuffleButton()
             KeyType.LETTER -> handleLetterTap(key.label)
         }
+    }
+
+    private val arrowIconPaint = Paint().apply {
+        color = Color.WHITE
+        isAntiAlias = true
+        style = Paint.Style.FILL
+    }
+
+    private fun drawArrowIcon(canvas: Canvas, rect: RectF) {
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val triHeight = rowHeight * 0.16f
+        val triWidth = rowHeight * 0.11f
+        val gap = rowHeight * 0.14f
+
+        val leftCx = cx - gap
+        val leftPath = Path().apply {
+            moveTo(leftCx + triWidth * 0.5f, cy - triHeight)
+            lineTo(leftCx - triWidth * 0.5f, cy)
+            lineTo(leftCx + triWidth * 0.5f, cy + triHeight)
+            close()
+        }
+        canvas.drawPath(leftPath, arrowIconPaint)
+
+        val rightCx = cx + gap
+        val rightPath = Path().apply {
+            moveTo(rightCx - triWidth * 0.5f, cy - triHeight)
+            lineTo(rightCx + triWidth * 0.5f, cy)
+            lineTo(rightCx - triWidth * 0.5f, cy + triHeight)
+            close()
+        }
+        canvas.drawPath(rightPath, arrowIconPaint)
     }
 
     private fun handleLetterTap(label: String) {
