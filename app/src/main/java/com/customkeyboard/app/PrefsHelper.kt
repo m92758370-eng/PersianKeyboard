@@ -151,6 +151,14 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
     }
 
+    fun deleteParagraphAt(context: Context, index: Int) {
+        val current = getParagraphs(context).toMutableList()
+        if (index in current.indices) {
+            current.removeAt(index)
+            prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
+        }
+    }
+
     fun updateParagraph(context: Context, index: Int, newText: String) {
         val current = getParagraphs(context).toMutableList()
         if (index in current.indices) {
