@@ -15,6 +15,9 @@ object PrefsHelper {
     private const val KEY_PARAGRAPHS = "word_shuffle_paragraphs"
     private const val KEY_LAST_WORD = "word_shuffle_last_word"
     private const val KEY_BACKGROUND_URI = "keyboard_background_uri"
+    private const val KEY_GEMINI_API_KEY = "gemini_api_key"
+    private const val KEY_AI_STYLE_NOTES = "ai_style_notes"
+    private const val KEY_AI_EXAMPLES = "ai_story_examples"
     private const val MAP_PREFIX = "map_"
     private const val WORDLIST_PREFIX = "wordlist_"
     private const val SEPARATOR = "\u0001"
@@ -169,5 +172,41 @@ object PrefsHelper {
         val editor = prefs(context).edit()
         if (uri == null) editor.remove(KEY_BACKGROUND_URI) else editor.putString(KEY_BACKGROUND_URI, uri)
         editor.apply()
+    }
+
+    fun getGeminiApiKey(context: Context): String {
+        return prefs(context).getString(KEY_GEMINI_API_KEY, "") ?: ""
+    }
+
+    fun setGeminiApiKey(context: Context, key: String) {
+        prefs(context).edit().putString(KEY_GEMINI_API_KEY, key).apply()
+    }
+
+    fun getAiStyleNotes(context: Context): String {
+        return prefs(context).getString(KEY_AI_STYLE_NOTES, "") ?: ""
+    }
+
+    fun setAiStyleNotes(context: Context, notes: String) {
+        prefs(context).edit().putString(KEY_AI_STYLE_NOTES, notes).apply()
+    }
+
+    fun getAiExamples(context: Context): List<String> {
+        val raw = prefs(context).getString(KEY_AI_EXAMPLES, "") ?: ""
+        return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR).filter { it.isNotBlank() }
+    }
+
+    fun addAiExample(context: Context, example: String) {
+        if (example.isBlank()) return
+        val current = getAiExamples(context).toMutableList()
+        current.add(0, example)
+        prefs(context).edit().putString(KEY_AI_EXAMPLES, current.joinToString(SEPARATOR)).apply()
+    }
+
+    fun removeAiExampleAt(context: Context, index: Int) {
+        val current = getAiExamples(context).toMutableList()
+        if (index in current.indices) {
+            current.removeAt(index)
+            prefs(context).edit().putString(KEY_AI_EXAMPLES, current.joinToString(SEPARATOR)).apply()
+        }
     }
 }
