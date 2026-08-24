@@ -117,7 +117,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val heightPx = (280 * context.resources.displayMetrics.density).toInt()
+        val heightPx = (230 * context.resources.displayMetrics.density).toInt()
         val width = MeasureSpec.getSize(widthMeasureSpec)
         setMeasuredDimension(width, heightPx)
     }
