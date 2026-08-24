@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -29,6 +30,11 @@
             android:name=".TextReplaceActivity"
             android:exported="true"
             android:label="حذف و جایگزینی کلمات" />
+
+        <activity
+            android:name=".AiWriterActivity"
+            android:exported="true"
+            android:label="دستیار داستان‌نویسی" />
 
         <service
             android:name=".MyInputMethodService"
