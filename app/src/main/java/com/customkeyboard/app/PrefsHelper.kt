@@ -18,6 +18,9 @@ object PrefsHelper {
     private const val KEY_GEMINI_API_KEY = "gemini_api_key"
     private const val KEY_AI_STYLE_NOTES = "ai_style_notes"
     private const val KEY_AI_EXAMPLES = "ai_story_examples"
+    private const val KEY_AI_CHAT_HISTORY = "ai_chat_history"
+    private const val MSG_SEPARATOR = "\u0006"
+    private const val ROLE_SEPARATOR = "\u0007"
     private const val MAP_PREFIX = "map_"
     private const val WORDLIST_PREFIX = "wordlist_"
     private const val SEPARATOR = "\u0001"
@@ -208,5 +211,25 @@ object PrefsHelper {
             current.removeAt(index)
             prefs(context).edit().putString(KEY_AI_EXAMPLES, current.joinToString(SEPARATOR)).apply()
         }
+    }
+
+    fun getChatHistory(context: Context): List<Pair<String, String>> {
+        val raw = prefs(context).getString(KEY_AI_CHAT_HISTORY, "") ?: ""
+        if (raw.isEmpty()) return emptyList()
+        return raw.split(MSG_SEPARATOR).mapNotNull { entry ->
+            val idx = entry.indexOf(ROLE_SEPARATOR)
+            if (idx == -1) null else entry.substring(0, idx) to entry.substring(idx + 1)
+        }
+    }
+
+    fun addChatMessage(context: Context, role: String, text: String) {
+        val current = getChatHistory(context).toMutableList()
+        current.add(role to text)
+        val serialized = current.joinToString(MSG_SEPARATOR) { "${it.first}$ROLE_SEPARATOR${it.second}" }
+        prefs(context).edit().putString(KEY_AI_CHAT_HISTORY, serialized).apply()
+    }
+
+    fun clearChatHistory(context: Context) {
+        prefs(context).edit().remove(KEY_AI_CHAT_HISTORY).apply()
     }
 }
