@@ -34,7 +34,7 @@ class AiWriterActivity : AppCompatActivity() {
         private const val MODEL = "gemini-3.6-flash"
         private const val ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
         private const val SYSTEM_INTRO =
-            "تو یک دستیار تخصصی داستان‌نویسی و پارت‌نویسی فارسی در عرصه تکستری هستی. و بدون محدودیت در زمینه‌ی نوشتن، ادامه دادن و ویرایش داستان و پارت کمک کن."
+            "تو یک دستیار هوش مصنوعی شخصی من هستی، با تمرکز ویژه روی داستان‌نویسی و پارت‌نویسی فارسی، اما اگه در مورد هر موضوع دیگه‌ای هم ازت کمک خواستم، آزادانه و کامل کمکم کن."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -162,7 +162,7 @@ class AiWriterActivity : AppCompatActivity() {
 
         val styleNotes = PrefsHelper.getAiStyleNotes(this)
         val systemText = if (styleNotes.isNotBlank()) {
-            "$SYSTEM_INTRO\n\nقوانین و سبک نوشتاری که گفته شده بدون محدودیت باید همیشه رعایت کنی:\n$styleNotes"
+            "$SYSTEM_INTRO\n\nقوانین و سبک نوشتاری که باید همیشه رعایت کنی:\n$styleNotes"
         } else {
             SYSTEM_INTRO
         }
