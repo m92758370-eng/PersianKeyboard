@@ -8,6 +8,7 @@ object PrefsHelper {
     private const val PREFS_NAME = "keyboard_prefs"
     private const val KEY_AUTO_TYPE_TEXT = "auto_type_text"
     private const val KEY_AUTO_TYPE_DELAY_MS = "auto_type_delay_ms"
+    private const val KEY_AUTO_TYPE_PROGRESS = "auto_type_progress"
     private const val KEY_SAVED_TEXTS = "saved_texts"
     private const val KEY_WORDLIST_NAMES = "wordlist_names"
     private const val KEY_USED_PAIRS = "word_shuffle_used_pairs"
@@ -41,6 +42,14 @@ object PrefsHelper {
 
     fun setAutoTypeText(context: Context, text: String) {
         prefs(context).edit().putString(KEY_AUTO_TYPE_TEXT, text).apply()
+    }
+
+    fun getAutoTypeProgress(context: Context): Int {
+        return prefs(context).getInt(KEY_AUTO_TYPE_PROGRESS, 0)
+    }
+
+    fun setAutoTypeProgress(context: Context, index: Int) {
+        prefs(context).edit().putInt(KEY_AUTO_TYPE_PROGRESS, index).apply()
     }
 
     fun getAutoTypeDelayMs(context: Context): Long {
@@ -130,12 +139,9 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
     }
 
-    // برای وقتی که کاربر متن یه پارت خاص رو دستی اصلاح می‌کنه (مثلاً کلمات قرمز رو درست می‌کنه)
     fun updateParagraph(context: Context, index: Int, newText: String) {
         val current = getParagraphs(context).toMutableList()
         if (index in current.indices) {
-            // اگه کاربر کل متن پارت رو پاک کنه، به‌جای رشته‌ی خالی یه فاصله می‌ذاریم
-            // وگرنه دفعه‌ی بعد که خونده می‌شه فیلتر می‌شه و شماره‌ی پارت‌های بعدی به‌هم می‌ریزه
             current[index] = if (newText.isEmpty()) " " else newText
             prefs(context).edit().putString(KEY_PARAGRAPHS, current.joinToString(SEPARATOR)).apply()
         }
@@ -155,7 +161,6 @@ object PrefsHelper {
         editor.apply()
     }
 
-    // عکس دلخواهی که کاربر برای پس‌زمینه‌ی کیبورد از گالری انتخاب کرده (مثل قابلیت کیبورد شیائومی)
     fun getBackgroundImageUri(context: Context): String? {
         return prefs(context).getString(KEY_BACKGROUND_URI, null)
     }
