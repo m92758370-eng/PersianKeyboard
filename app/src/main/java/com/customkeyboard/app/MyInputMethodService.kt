@@ -86,7 +86,16 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         if (autoTypeRunning) {
             pauseAutoType()
             Toast.makeText(this, "تایپ خودکار متوقف شد", Toast.LENGTH_SHORT).show()
-        } else if (autoTypeChars.isNotEmpty() && autoTypeIndex < autoTypeChars.size) {
+            return
+        }
+        if (autoTypeChars.isEmpty()) {
+            val text = PrefsHelper.getAutoTypeText(this)
+            if (text.isNotEmpty()) {
+                autoTypeChars = text.map { it.toString() }
+                autoTypeIndex = PrefsHelper.getAutoTypeProgress(this).coerceIn(0, autoTypeChars.size)
+            }
+        }
+        if (autoTypeChars.isNotEmpty() && autoTypeIndex < autoTypeChars.size) {
             resumeAutoType()
             Toast.makeText(this, "تایپ خودکار ادامه یافت", Toast.LENGTH_SHORT).show()
         } else {
@@ -109,6 +118,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         }
         autoTypeChars = text.map { it.toString() }
         autoTypeIndex = 0
+        PrefsHelper.setAutoTypeProgress(this, 0)
         autoTypeRunning = true
         Toast.makeText(this, "تایپ خودکار شروع شد", Toast.LENGTH_SHORT).show()
         scheduleNextChar()
@@ -127,6 +137,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         }
         if (autoTypeIndex >= autoTypeChars.size) {
             autoTypeRunning = false
+            PrefsHelper.setAutoTypeProgress(this, 0)
             Toast.makeText(this, "تایپ خودکار تمام شد", Toast.LENGTH_SHORT).show()
             return
         }
@@ -139,6 +150,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
                 keyboardView.highlightKey(ch)
             }
             autoTypeIndex++
+            PrefsHelper.setAutoTypeProgress(this, autoTypeIndex)
             scheduleNextChar()
         }, delay)
     }
