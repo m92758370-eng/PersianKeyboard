@@ -105,6 +105,12 @@ object PrefsHelper {
         prefs(context).edit().putString(WORDLIST_PREFIX + name, words.joinToString(SEPARATOR)).apply()
     }
 
+    fun addWordToList(context: Context, name: String, word: String) {
+        val current = getWordList(context, name).toMutableList()
+        current.add(word)
+        prefs(context).edit().putString(WORDLIST_PREFIX + name, current.joinToString(SEPARATOR)).apply()
+    }
+
     fun deleteWordList(context: Context, name: String) {
         val names = getWordListNames(context).toMutableList()
         names.remove(name)
