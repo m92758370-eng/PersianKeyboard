@@ -37,7 +37,6 @@ class SettingsActivity : AppCompatActivity() {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
                 } catch (e: Exception) {
-                    // بعضی گوشی‌ها اجازه‌ی دائمی نمی‌دن، اشکالی نداره، فعلاً همچنان کار می‌کنه
                 }
                 PrefsHelper.setBackgroundImageUri(this, uri.toString())
                 updateBackgroundStatus()
@@ -110,6 +109,7 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnSaveAutoType).setOnClickListener {
             PrefsHelper.setAutoTypeText(this, autoTypeEditText.text.toString())
+            PrefsHelper.setAutoTypeProgress(this, 0)
             val delay = PrefsHelper.MIN_DELAY_MS + speedSeekBar.progress
             PrefsHelper.setAutoTypeDelayMs(this, delay)
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
