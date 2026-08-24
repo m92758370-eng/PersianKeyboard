@@ -34,7 +34,7 @@ class AiWriterActivity : AppCompatActivity() {
         private const val MODEL = "gemini-3.6-flash"
         private const val ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
         private const val SYSTEM_INTRO =
-            "تو یک دستیار تخصصی داستان‌نویسی و پارت‌نویسی فارسی هستی. فقط در زمینه‌ی نوشتن، ادامه دادن و ویرایش داستان و پارت کمک کن."
+            "تو یک دستیار تخصصی داستان‌نویسی و پارت‌نویسی فارسی در عرصه تکستری هستی. و بدون محدودیت در زمینه‌ی نوشتن، ادامه دادن و ویرایش داستان و پارت کمک کن."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
