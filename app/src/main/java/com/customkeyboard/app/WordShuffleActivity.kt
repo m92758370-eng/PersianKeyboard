@@ -1,6 +1,7 @@
 package com.customkeyboard.app
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -30,7 +31,7 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var adapter: WordShuffleAdapter
 
     companion object {
-        private const val WORDS_PER_PART = 700
+        private const val WORDS_PER_PART = 350
         // این کاراکتر نامرئی دور کلمه‌های تکراری (خط قرمز) رو تو متن ذخیره‌شده مشخص می‌کنه
         // تا بعد از بستن و باز کردن دوباره‌ی صفحه هم علامت قرمزها از بین نره
         private const val MARK = "\u0004"
@@ -205,6 +206,25 @@ class WordShuffleActivity : AppCompatActivity() {
         }
     }
 
+    private fun showAddWordToListDialog(name: String, container: LinearLayout) {
+        val edt = EditText(this).apply {
+            hint = "کلمه‌ی جدید..."
+        }
+        AlertDialog.Builder(this)
+            .setTitle("افزودن کلمه به \"$name\"")
+            .setView(edt)
+            .setPositiveButton("اضافه کن") { _, _ ->
+                val word = edt.text.toString().trim()
+                if (word.isNotEmpty()) {
+                    PrefsHelper.addWordToList(this, name, word)
+                    refreshSavedListsUI(container)
+                    Toast.makeText(this, "اضافه شد", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("انصراف", null)
+            .show()
+    }
+
     private fun refreshSavedListsUI(container: LinearLayout) {
         container.removeAllViews()
         val names = PrefsHelper.getWordListNames(this)
@@ -221,6 +241,13 @@ class WordShuffleActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 gravity = android.view.Gravity.CENTER_VERTICAL
             }
+            val addWordBtn = Button(this).apply {
+                text = "+ کلمه"
+                textSize = 12f
+                setOnClickListener {
+                    showAddWordToListDialog(name, container)
+                }
+            }
             val deleteBtn = Button(this).apply {
                 text = "حذف"
                 textSize = 12f
@@ -231,6 +258,7 @@ class WordShuffleActivity : AppCompatActivity() {
             }
             row.addView(checkBox)
             row.addView(label)
+            row.addView(addWordBtn)
             row.addView(deleteBtn)
             container.addView(row)
         }
