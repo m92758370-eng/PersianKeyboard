@@ -1,207 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#F5F5F5"
+        android:padding="12dp">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="دستیار هوش مصنوعی داستان‌نویسی"
+            android:layout_weight="1"
+            android:text="دستیار داستان‌نویسی"
             android:textStyle="bold"
-            android:textSize="20sp"
-            android:paddingBottom="4dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="این بخش فقط برای نوشتن، ادامه دادن و ویرایش داستان و پارت استفاده می‌شه."
-            android:textColor="#666666"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="۱) API Key گوگل Gemini"
-            android:textStyle="bold"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="از aistudio.google.com/apikey رایگان بگیر و اینجا بچسبون"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/edtApiKey"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textPassword"
-            android:hint="کلید API" />
+            android:textSize="18sp" />
 
         <Button
-            android:id="@+id/btnSaveApiKey"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="ذخیره کلید" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#33000000"
-            android:layout_marginVertical="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="۲) قوانین و سبک نوشتاری (یادداشت آموزشی)"
-            android:textStyle="bold"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="هرچی اینجا بنویسی، همیشه قبل از هر درخواست به AI یادآوری می‌شه"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/edtStyleNotes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minLines="5"
-            android:gravity="top|start"
-            android:hint="مثلاً: راوی همیشه اول‌شخصه. لحن باید محاوره‌ای و احساسی باشه. اسم شخصیت اصلی «...» است. هر پارت باید با یه گره یا سوال تموم بشه." />
-
-        <Button
-            android:id="@+id/btnSaveStyleNotes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="ذخیره قوانین" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#33000000"
-            android:layout_marginVertical="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="۳) نمونه پارت‌های قبلی (برای یادگیری سبک)"
-            android:textStyle="bold"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="آخرین ۳ نمونه همیشه همراه درخواست فرستاده می‌شه تا لحن و سبکت رو یاد بگیره"
-            android:textColor="#888888"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp" />
-
-        <LinearLayout
-            android:id="@+id/examplesContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <Button
-            android:id="@+id/btnAddExample"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="اضافه کردن متن پایین (خروجی) به‌عنوان نمونه‌ی جدید" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#33000000"
-            android:layout_marginVertical="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="۴) درخواستت رو بنویس"
-            android:textStyle="bold"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/edtPrompt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minLines="3"
-            android:gravity="top|start"
-            android:layout_marginTop="4dp"
-            android:hint="مثلاً: یه پارت صد خطی راجب ... بنویس" />
-
-        <Button
-            android:id="@+id/btnGenerate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="تولید کن" />
-
-        <ProgressBar
-            android:id="@+id/progressBar"
+            android:id="@+id/btnClearChat"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="8dp"
-            android:visibility="gone" />
+            android:minWidth="0dp"
+            android:paddingHorizontal="12dp"
+            android:text="پاک کردن" />
 
-        <TextView
-            android:layout_width="match_parent"
+        <Button
+            android:id="@+id/btnSettings"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="خروجی (قابل ویرایش):"
-            android:textStyle="bold" />
-
-        <EditText
-            android:id="@+id/edtOutput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minLines="10"
-            android:gravity="top|start"
-            android:layout_marginTop="8dp"
-            android:background="#11000000"
-            android:padding="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnCopyOutput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="12sp"
-                android:text="کپی خروجی" />
-
-            <Button
-                android:id="@+id/btnTeachFromOutput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:textSize="12sp"
-                android:text="این سبک رو یادش بده" />
-
-        </LinearLayout>
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="12dp"
+            android:text="تنظیمات" />
 
     </LinearLayout>
 
-</ScrollView>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/messagesRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingVertical="8dp"
+        android:clipToPadding="false" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/edtPrompt"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="6"
+            android:minLines="1"
+            android:gravity="top|start"
+            android:hint="پیامت رو بنویس... مثلاً: یه پارت صد خطی راجب ... بنویس"
+            android:background="#F0F0F0"
+            android:padding="10dp" />
+
+        <Button
+            android:id="@+id/btnSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="ارسال" />
+
+    </LinearLayout>
+
+</LinearLayout>
