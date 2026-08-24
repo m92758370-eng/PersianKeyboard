@@ -251,18 +251,15 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bottomTop = rowHeight * letterRows.size
         val bottomBottom = bottomTop + rowHeight
-        val shuffleW = w * 0.09f
-        val switchW = w * 0.12f
-        val pauseW = w * 0.11f
-        val autoW = w * 0.12f
-        val backW = w * 0.14f
-        val enterW = w * 0.14f
-        val spaceW = w - shuffleW - switchW - pauseW - autoW - backW - enterW
+        val switchW = w * 0.13f
+        val pauseW = w * 0.12f
+        val autoW = w * 0.13f
+        val backW = w * 0.15f
+        val enterW = w * 0.15f
+        val spaceW = w - switchW - pauseW - autoW - backW - enterW
 
         var x = 0f
-        keys.add(KeyRect("⋮", RectF(x, bottomTop, x + shuffleW, bottomBottom), KeyType.WORD_SHUFFLE))
-        x += shuffleW
-        keys.add(KeyRect(if (usePersian) "EN" else "فا", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
+        keys.add(KeyRect("", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
         x += switchW
         keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
         x += pauseW
@@ -309,13 +306,15 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 drawArrowIcon(canvas, key.rect)
             } else if (key.type == KeyType.AUTOTYPE) {
                 drawSmileyIcon(canvas, key.rect)
+            } else if (key.type == KeyType.LANG_SWITCH) {
+                drawGlobeIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
 
             if (key.type == KeyType.LETTER) {
                 val replacement = PrefsHelper.getReplacement(context, key.label)
-                if (replacement.isNotEmpty()) {
+                if (replacement.isNotBlank()) {
                     canvas.drawText("•", key.rect.centerX(), key.rect.bottom - 10f, labelPaint)
                 }
             }
@@ -451,9 +450,21 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
     }
 
+    private fun drawGlobeIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val r = rowHeight * 0.17f
+
+        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
+        canvas.drawLine(cx - r, cy, cx + r, cy, smileyStrokePaint)
+        val vOval = RectF(cx - r * 0.42f, cy - r, cx + r * 0.42f, cy + r)
+        canvas.drawOval(vOval, smileyStrokePaint)
+    }
+
     private fun handleLetterTap(label: String) {
         val replacement = PrefsHelper.getReplacement(context, label)
-        val toCommit = if (replacement.isNotEmpty()) replacement else label
+        val toCommit = if (replacement.isNotBlank()) replacement else label
         flashKey(label)
         listener?.onCommitText(toCommit)
     }
