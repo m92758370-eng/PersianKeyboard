@@ -34,7 +34,7 @@ class AiWriterActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     companion object {
-        private const val MODEL = "gemini-2.0-flash"
+        private const val MODEL = "gemini-3.6-flash"
         private const val ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
     }
 
