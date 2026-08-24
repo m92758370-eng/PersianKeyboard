@@ -1,19 +1,18 @@
 package com.customkeyboard.app
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
+import android.app.AlertDialog
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -22,13 +21,11 @@ import java.util.concurrent.Executors
 
 class AiWriterActivity : AppCompatActivity() {
 
-    private lateinit var edtApiKey: EditText
-    private lateinit var edtStyleNotes: EditText
+    private lateinit var recyclerView: RecyclerView
     private lateinit var edtPrompt: EditText
-    private lateinit var edtOutput: EditText
-    private lateinit var btnGenerate: Button
+    private lateinit var btnSend: Button
     private lateinit var progressBar: ProgressBar
-    private lateinit var examplesContainer: LinearLayout
+    private lateinit var adapter: ChatAdapter
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -36,6 +33,8 @@ class AiWriterActivity : AppCompatActivity() {
     companion object {
         private const val MODEL = "gemini-3.6-flash"
         private const val ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
+        private const val SYSTEM_INTRO =
+            "تو یک دستیار تخصصی داستان‌نویسی و پارت‌نویسی فارسی هستی. فقط در زمینه‌ی نوشتن، ادامه دادن و ویرایش داستان و پارت کمک کن."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,165 +43,106 @@ class AiWriterActivity : AppCompatActivity() {
 
         if (RemoteStatusHelper.blockIfDisabled(this)) return
 
-        edtApiKey = findViewById(R.id.edtApiKey)
-        edtStyleNotes = findViewById(R.id.edtStyleNotes)
+        recyclerView = findViewById(R.id.messagesRecyclerView)
         edtPrompt = findViewById(R.id.edtPrompt)
-        edtOutput = findViewById(R.id.edtOutput)
-        btnGenerate = findViewById(R.id.btnGenerate)
+        btnSend = findViewById(R.id.btnSend)
         progressBar = findViewById(R.id.progressBar)
-        examplesContainer = findViewById(R.id.examplesContainer)
+
+        val history = PrefsHelper.getChatHistory(this).map { ChatMessage(it.first, it.second) }
+        adapter = ChatAdapter(history.toMutableList())
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+        scrollToBottom()
+
+        findViewById<Button>(R.id.btnSettings).setOnClickListener {
+            showSettingsDialog()
+        }
+
+        findViewById<Button>(R.id.btnClearChat).setOnClickListener {
+            confirmClearChat()
+        }
+
+        btnSend.setOnClickListener {
+            sendMessage()
+        }
+    }
+
+    private fun scrollToBottom() {
+        if (adapter.itemCount > 0) {
+            recyclerView.scrollToPosition(adapter.itemCount - 1)
+        }
+    }
+
+    private fun showSettingsDialog() {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_ai_settings, null)
+        val edtApiKey = view.findViewById<EditText>(R.id.edtApiKey)
+        val edtStyleNotes = view.findViewById<EditText>(R.id.edtStyleNotes)
 
         edtApiKey.setText(PrefsHelper.getGeminiApiKey(this))
         edtStyleNotes.setText(PrefsHelper.getAiStyleNotes(this))
 
-        findViewById<Button>(R.id.btnSaveApiKey).setOnClickListener {
-            PrefsHelper.setGeminiApiKey(this, edtApiKey.text.toString().trim())
-            Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
-        }
-
-        findViewById<Button>(R.id.btnSaveStyleNotes).setOnClickListener {
-            PrefsHelper.setAiStyleNotes(this, edtStyleNotes.text.toString())
-            Toast.makeText(this, "قوانین سبک ذخیره شد", Toast.LENGTH_SHORT).show()
-        }
-
-        findViewById<Button>(R.id.btnAddExample).setOnClickListener {
-            addExampleFromOutput()
-        }
-
-        findViewById<Button>(R.id.btnCopyOutput).setOnClickListener {
-            copyToClipboard(edtOutput.text.toString())
-        }
-
-        findViewById<Button>(R.id.btnTeachFromOutput).setOnClickListener {
-            addExampleFromOutput()
-        }
-
-        btnGenerate.setOnClickListener {
-            generate()
-        }
-
-        rebuildExamplesList()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        PrefsHelper.setAiStyleNotes(this, edtStyleNotes.text.toString())
-    }
-
-    private fun rebuildExamplesList() {
-        examplesContainer.removeAllViews()
-        val examples = PrefsHelper.getAiExamples(this)
-        if (examples.isEmpty()) {
-            val tv = TextView(this)
-            tv.text = "هنوز نمونه‌ای ثبت نشده"
-            tv.setTextColor(0xFF888888.toInt())
-            examplesContainer.addView(tv)
-            return
-        }
-        examples.forEachIndexed { index, example ->
-            val row = LinearLayout(this)
-            row.orientation = LinearLayout.HORIZONTAL
-            row.setPadding(0, 8, 0, 8)
-
-            val preview = example.take(40).replace("\n", " ")
-            val tv = TextView(this)
-            tv.text = "نمونه ${index + 1}: $preview${if (example.length > 40) "..." else ""}"
-            tv.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-
-            val btnDelete = Button(this)
-            btnDelete.text = "حذف"
-            btnDelete.textSize = 12f
-            btnDelete.setOnClickListener {
-                PrefsHelper.removeAiExampleAt(this, index)
-                rebuildExamplesList()
+        AlertDialog.Builder(this)
+            .setTitle("تنظیمات")
+            .setView(view)
+            .setPositiveButton("ذخیره") { _, _ ->
+                PrefsHelper.setGeminiApiKey(this, edtApiKey.text.toString().trim())
+                PrefsHelper.setAiStyleNotes(this, edtStyleNotes.text.toString())
+                Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
             }
-
-            row.addView(tv)
-            row.addView(btnDelete)
-            examplesContainer.addView(row)
-        }
+            .setNegativeButton("انصراف", null)
+            .show()
     }
 
-    private fun addExampleFromOutput() {
-        val text = edtOutput.text.toString().trim()
-        if (text.isBlank()) {
-            Toast.makeText(this, "اول یه متن تولید کن یا بنویس", Toast.LENGTH_SHORT).show()
-            return
-        }
-        PrefsHelper.addAiExample(this, text)
-        Toast.makeText(this, "به‌عنوان نمونه ذخیره شد؛ از این به بعد سبکش رو در نظر می‌گیره", Toast.LENGTH_LONG).show()
-        rebuildExamplesList()
+    private fun confirmClearChat() {
+        AlertDialog.Builder(this)
+            .setTitle("پاک کردن مکالمه")
+            .setMessage("کل مکالمه پاک می‌شه و دیگه قابل بازگشت نیست. مطمئنی؟")
+            .setPositiveButton("پاک کن") { _, _ ->
+                PrefsHelper.clearChatHistory(this)
+                adapter.clear()
+            }
+            .setNegativeButton("انصراف", null)
+            .show()
     }
 
-    private fun copyToClipboard(text: String) {
-        if (text.isBlank()) {
-            Toast.makeText(this, "چیزی برای کپی نیست", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("متن", text))
-        Toast.makeText(this, "کپی شد", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun generate() {
-        val apiKey = edtApiKey.text.toString().trim()
+    private fun sendMessage() {
+        val apiKey = PrefsHelper.getGeminiApiKey(this)
         if (apiKey.isBlank()) {
-            Toast.makeText(this, "اول API key جمینای رو وارد و ذخیره کن", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "اول از تنظیمات، API key رو وارد و ذخیره کن", Toast.LENGTH_LONG).show()
             return
         }
-        val userRequest = edtPrompt.text.toString().trim()
-        if (userRequest.isBlank()) {
-            Toast.makeText(this, "بنویس چی می‌خوای بنویسه", Toast.LENGTH_SHORT).show()
-            return
-        }
+        val text = edtPrompt.text.toString().trim()
+        if (text.isBlank()) return
 
-        val fullPrompt = buildPrompt(userRequest)
+        val userMessage = ChatMessage("user", text)
+        adapter.addMessage(userMessage)
+        PrefsHelper.addChatMessage(this, "user", text)
+        edtPrompt.setText("")
+        scrollToBottom()
 
-        btnGenerate.isEnabled = false
+        btnSend.isEnabled = false
         progressBar.visibility = View.VISIBLE
+
+        val historySnapshot = PrefsHelper.getChatHistory(this)
 
         executor.execute {
             val result = try {
-                callGemini(apiKey, fullPrompt)
+                callGemini(apiKey, historySnapshot)
             } catch (e: Exception) {
                 "خطا: ${e.message}"
             }
             mainHandler.post {
                 progressBar.visibility = View.GONE
-                btnGenerate.isEnabled = true
-                edtOutput.setText(result)
+                btnSend.isEnabled = true
+                val aiMessage = ChatMessage("model", result)
+                adapter.addMessage(aiMessage)
+                PrefsHelper.addChatMessage(this, "model", result)
+                scrollToBottom()
             }
         }
     }
 
-    private fun buildPrompt(userRequest: String): String {
-        val sb = StringBuilder()
-        sb.append("تو یک دستیار تخصصی داستان‌نویسی و پارت‌نویسی فارسی هستی. ")
-        sb.append("فقط در زمینه‌ی نوشتن، ادامه دادن و ویرایش داستان و پارت کمک کن.\n\n")
-
-        val styleNotes = PrefsHelper.getAiStyleNotes(this)
-        if (styleNotes.isNotBlank()) {
-            sb.append("قوانین و سبک نوشتاری من که باید رعایت کنی:\n")
-            sb.append(styleNotes)
-            sb.append("\n\n")
-        }
-
-        val examples = PrefsHelper.getAiExamples(this)
-        if (examples.isNotEmpty()) {
-            sb.append("چند نمونه از پارت‌های قبلی من که باید سبک نوشتنم رو از روشون یاد بگیری:\n")
-            examples.take(3).forEachIndexed { i, ex ->
-                sb.append("--- نمونه ${i + 1} ---\n")
-                sb.append(ex)
-                sb.append("\n\n")
-            }
-        }
-
-        sb.append("درخواست الان:\n")
-        sb.append(userRequest)
-        return sb.toString()
-    }
-
-    private fun callGemini(apiKey: String, prompt: String): String {
+    private fun callGemini(apiKey: String, history: List<Pair<String, String>>): String {
         val url = URL("$ENDPOINT_BASE$MODEL:generateContent?key=$apiKey")
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -211,11 +151,27 @@ class AiWriterActivity : AppCompatActivity() {
         connection.connectTimeout = 30000
         connection.readTimeout = 60000
 
-        val partObj = JSONObject().put("text", prompt)
-        val partsArray = JSONArray().put(partObj)
-        val contentObj = JSONObject().put("parts", partsArray)
-        val contentsArray = JSONArray().put(contentObj)
-        val body = JSONObject().put("contents", contentsArray)
+        val contentsArray = JSONArray()
+        for ((role, text) in history) {
+            val partObj = JSONObject().put("text", text)
+            val contentObj = JSONObject()
+                .put("role", role)
+                .put("parts", JSONArray().put(partObj))
+            contentsArray.put(contentObj)
+        }
+
+        val styleNotes = PrefsHelper.getAiStyleNotes(this)
+        val systemText = if (styleNotes.isNotBlank()) {
+            "$SYSTEM_INTRO\n\nقوانین و سبک نوشتاری که گفته شده بدون محدودیت باید همیشه رعایت کنی:\n$styleNotes"
+        } else {
+            SYSTEM_INTRO
+        }
+        val systemInstruction = JSONObject()
+            .put("parts", JSONArray().put(JSONObject().put("text", systemText)))
+
+        val body = JSONObject()
+            .put("contents", contentsArray)
+            .put("systemInstruction", systemInstruction)
 
         connection.outputStream.use { os ->
             os.write(body.toString().toByteArray(Charsets.UTF_8))
