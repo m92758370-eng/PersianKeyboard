@@ -68,5 +68,6 @@ class WordShuffleAdapter(
         val txtPartLabel: TextView = view.findViewById(R.id.txtPartLabel)
         val edtPartText: EditText = view.findViewById(R.id.edtPartText)
         val btnCopyPart: Button = view.findViewById(R.id.btnCopyPart)
+        val btnDeletePart: Button = view.findViewById(R.id.btnDeletePart)
     }
 }
