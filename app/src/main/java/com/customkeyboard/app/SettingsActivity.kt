@@ -24,6 +24,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var speedSeekBar: SeekBar
     private lateinit var autoTypeEditText: EditText
     private lateinit var txtBackgroundStatus: TextView
+    private lateinit var txtThemeStatus: TextView
 
     private val backgroundPickerLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -95,6 +96,15 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "پس‌زمینه پیش‌فرض برگشت", Toast.LENGTH_SHORT).show()
         }
 
+        txtThemeStatus = findViewById(R.id.txtThemeStatus)
+        updateThemeStatus()
+        findViewById<Button>(R.id.btnToggleTheme).setOnClickListener {
+            val newDark = !PrefsHelper.isDarkMode(this)
+            PrefsHelper.setDarkMode(this, newDark)
+            updateThemeStatus()
+            Toast.makeText(this, "دفعه‌ی بعد که کیبورد رو باز کنی اعمال می‌شه", Toast.LENGTH_SHORT).show()
+        }
+
         autoTypeEditText = findViewById(R.id.autoTypeEditText)
         autoTypeEditText.setText(PrefsHelper.getAutoTypeText(this))
 
@@ -127,6 +137,12 @@ class SettingsActivity : AppCompatActivity() {
         } else {
             "الان پیش‌فرضه (بدون عکس دلخواه)"
         }
+    }
+
+    private fun updateThemeStatus() {
+        val dark = PrefsHelper.isDarkMode(this)
+        txtThemeStatus.text = if (dark) "حالت فعلی: شب" else "حالت فعلی: روز"
+        findViewById<Button>(R.id.btnToggleTheme).text = if (dark) "تغییر به حالت روز" else "تغییر به حالت شب"
     }
 
     private fun showDeviceIdDialog() {
