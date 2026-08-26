@@ -27,6 +27,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onEnter()
         fun onSpace()
         fun onSpaceLongPress()
+        fun onSpaceDoubleTap()
         fun onAutoTypeButton()
         fun onPauseResumeButton()
         fun onWordShuffleButton()
@@ -86,6 +87,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var backgroundBitmap: Bitmap? = null
     private var backgroundW = -1
     private var backgroundH = -1
+    private var fallbackBgColor = Color.parseColor("#121212")
 
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
@@ -93,6 +95,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var spacePressed = false
     private var spacePointerId = -1
     private var spaceLongPressTriggered = false
+    private var lastSpaceUpTime = 0L
+    private var spaceDoubleTapCandidate = false
     private val spaceLongPressRunnable = Runnable {
         spaceLongPressTriggered = true
         listener?.onSpaceLongPress()
@@ -124,6 +128,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        applyThemeColors()
         rebuildKeys(w, h)
         loadBackground(w, h)
     }
@@ -153,17 +158,44 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundBitmap = if (resId != 0) {
             val original = BitmapFactory.decodeResource(resources, resId)
             centerCrop(original, w, h)
-        } else {
+        } else if (PrefsHelper.isDarkMode(context)) {
             generateGrungeTexture(w, h)
+        } else {
+            null
         }
     }
 
     fun refreshBackground() {
+        applyThemeColors()
         backgroundBitmap = null
         backgroundW = -1
         backgroundH = -1
         loadBackground(width, height)
         invalidate()
+    }
+
+    private fun applyThemeColors() {
+        if (PrefsHelper.isDarkMode(context)) {
+            keyPaint.color = Color.parseColor("#992A2A2A")
+            specialKeyPaint.color = Color.parseColor("#991A1A1A")
+            textPaint.color = Color.WHITE
+            labelPaint.color = Color.parseColor("#BBBBBB")
+            overlayPaint.color = Color.parseColor("#66000000")
+            fallbackBgColor = Color.parseColor("#121212")
+            arrowIconPaint.color = Color.WHITE
+            smileyStrokePaint.color = Color.WHITE
+            smileyDotPaint.color = Color.WHITE
+        } else {
+            keyPaint.color = Color.parseColor("#99FFFFFF")
+            specialKeyPaint.color = Color.parseColor("#99DDDDDD")
+            textPaint.color = Color.BLACK
+            labelPaint.color = Color.parseColor("#555555")
+            overlayPaint.color = Color.parseColor("#11000000")
+            fallbackBgColor = Color.parseColor("#F0F0F0")
+            arrowIconPaint.color = Color.BLACK
+            smileyStrokePaint.color = Color.BLACK
+            smileyDotPaint.color = Color.BLACK
+        }
     }
 
     private fun centerCrop(src: Bitmap, targetW: Int, targetH: Int): Bitmap {
@@ -230,6 +262,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     fun isPersian(): Boolean = usePersian
 
+    fun updateSpaceLabel() {
+        rebuildKeys(width, height)
+        invalidate()
+    }
+
     private fun rebuildKeys(w: Int, h: Int) {
         keys.clear()
         if (w == 0 || h == 0) return
@@ -265,7 +302,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += pauseW
         keys.add(KeyRect("", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
-        keys.add(KeyRect("کینگ آنتونی", RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
+        keys.add(KeyRect(PrefsHelper.getSpaceLabel(context), RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
         keys.add(KeyRect("⌫", RectF(x, bottomTop, x + backW, bottomBottom), KeyType.BACKSPACE))
         x += backW
@@ -277,7 +314,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundBitmap?.let {
             canvas.drawBitmap(it, 0f, 0f, null)
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), overlayPaint)
-        } ?: canvas.drawColor(Color.parseColor("#121212"))
+        } ?: canvas.drawColor(fallbackBgColor)
 
         textPaint.textSize = rowHeight * 0.4f
 
@@ -335,6 +372,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                         spacePressed = true
                         spacePointerId = pointerId
                         spaceLongPressTriggered = false
+                        val now = System.currentTimeMillis()
+                        spaceDoubleTapCandidate = (now - lastSpaceUpTime) < 300L
                         handler.postDelayed(spaceLongPressRunnable, SPACE_LONG_PRESS_MS)
                     }
                     KeyType.BACKSPACE -> {
@@ -351,7 +390,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 if (spacePressed && pointerId == spacePointerId) {
                     handler.removeCallbacks(spaceLongPressRunnable)
                     if (!spaceLongPressTriggered) {
-                        listener?.onSpace()
+                        if (spaceDoubleTapCandidate) {
+                            listener?.onSpaceDoubleTap()
+                            lastSpaceUpTime = 0L
+                        } else {
+                            listener?.onSpace()
+                            lastSpaceUpTime = System.currentTimeMillis()
+                        }
                     }
                     spacePressed = false
                 }
