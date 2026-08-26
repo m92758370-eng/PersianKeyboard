@@ -26,6 +26,12 @@ object PrefsHelper {
     private const val SEPARATOR = "\u0001"
     private const val PAIR_SEPARATOR = "\u0002"
     private const val MAX_SAVED_TEXTS = 30
+    private const val KEY_WORDLIST_TRASH = "wordlist_trash_index"
+    private const val TRASH_ENTRY_SEPARATOR = "\u0003"
+    private const val TRASH_RETENTION_MS = 48L * 60L * 60L * 1000L
+    private const val KEY_SPACE_LABEL = "space_label"
+    private const val DEFAULT_SPACE_LABEL = "کینگ آنتونی"
+    private const val KEY_DARK_MODE = "dark_mode"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -114,11 +120,66 @@ object PrefsHelper {
     fun deleteWordList(context: Context, name: String) {
         val names = getWordListNames(context).toMutableList()
         names.remove(name)
-        prefs(context).edit()
-            .putString(KEY_WORDLIST_NAMES, names.joinToString(SEPARATOR))
-            .remove(WORDLIST_PREFIX + name)
-            .apply()
+        prefs(context).edit().putString(KEY_WORDLIST_NAMES, names.joinToString(SEPARATOR)).apply()
+
+        // به‌جای پاک کردن کامل، کلمات همون‌جا (WORDLIST_PREFIX+name) می‌مونن
+        // و فقط تو ایندکس سطل زباله با زمان حذف ثبت می‌شن، تا قابل بازگردانی باشه
+        val trash = getTrashIndexRaw(context)
+        trash.removeAll { it.first == name }
+        trash.add(name to System.currentTimeMillis())
+        saveTrashIndexRaw(context, trash)
     }
+
+    private fun getTrashIndexRaw(context: Context): MutableList<Pair<String, Long>> {
+        val raw = prefs(context).getString(KEY_WORDLIST_TRASH, "") ?: ""
+        if (raw.isEmpty()) return mutableListOf()
+        return raw.split(SEPARATOR).mapNotNull { entry ->
+            val parts = entry.split(TRASH_ENTRY_SEPARATOR)
+            if (parts.size == 2) parts[0] to (parts[1].toLongOrNull() ?: 0L) else null
+        }.toMutableList()
+    }
+
+    private fun saveTrashIndexRaw(context: Context, list: List<Pair<String, Long>>) {
+        val serialized = list.joinToString(SEPARATOR) { "${it.first}$TRASH_ENTRY_SEPARATOR${it.second}" }
+        prefs(context).edit().putString(KEY_WORDLIST_TRASH, serialized).apply()
+    }
+
+    // لیست‌هایی که بیشتر از ۴۸ ساعت تو سطل زباله بودن رو برای همیشه پاک می‌کنه
+    fun purgeExpiredTrash(context: Context) {
+        val trash = getTrashIndexRaw(context)
+        val now = System.currentTimeMillis()
+        val expired = trash.filter { now - it.second > TRASH_RETENTION_MS }
+        if (expired.isEmpty()) return
+        val editor = prefs(context).edit()
+        for ((name, _) in expired) {
+            editor.remove(WORDLIST_PREFIX + name)
+        }
+        editor.apply()
+        val remaining = trash.filter { now - it.second <= TRASH_RETENTION_MS }
+        saveTrashIndexRaw(context, remaining)
+    }
+
+    // هر آیتم: (اسم لیست, زمان حذف بر حسب میلی‌ثانیه, تعداد کلمات)
+    fun getTrashedLists(context: Context): List<Triple<String, Long, Int>> {
+        purgeExpiredTrash(context)
+        return getTrashIndexRaw(context).map { (name, ts) ->
+            Triple(name, ts, getWordList(context, name).size)
+        }
+    }
+
+    fun restoreWordList(context: Context, name: String) {
+        val trash = getTrashIndexRaw(context)
+        trash.removeAll { it.first == name }
+        saveTrashIndexRaw(context, trash)
+
+        val names = getWordListNames(context).toMutableList()
+        if (!names.contains(name)) {
+            names.add(name)
+            prefs(context).edit().putString(KEY_WORDLIST_NAMES, names.joinToString(SEPARATOR)).apply()
+        }
+    }
+
+    fun getTrashRetentionMs(): Long = TRASH_RETENTION_MS
 
     fun getUsedPairs(context: Context): Set<Pair<String, String>> {
         val raw = prefs(context).getString(KEY_USED_PAIRS, "") ?: ""
@@ -245,5 +306,21 @@ object PrefsHelper {
 
     fun clearChatHistory(context: Context) {
         prefs(context).edit().remove(KEY_AI_CHAT_HISTORY).apply()
+    }
+
+    fun getSpaceLabel(context: Context): String {
+        return prefs(context).getString(KEY_SPACE_LABEL, DEFAULT_SPACE_LABEL) ?: DEFAULT_SPACE_LABEL
+    }
+
+    fun setSpaceLabel(context: Context, label: String) {
+        prefs(context).edit().putString(KEY_SPACE_LABEL, label).apply()
+    }
+
+    fun isDarkMode(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_DARK_MODE, true)
+    }
+
+    fun setDarkMode(context: Context, dark: Boolean) {
+        prefs(context).edit().putBoolean(KEY_DARK_MODE, dark).apply()
     }
 }
