@@ -173,6 +173,19 @@ class WordShuffleActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(ClipData.newPlainText("پارت $partNumber", plainText))
             Toast.makeText(this, "پارت $partNumber کپی شد", Toast.LENGTH_SHORT).show()
         }
+
+        holder.btnDeletePart.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("حذف پارت $partNumber")
+                .setMessage("این پارت پاک می‌شه و دیگه قابل بازگشت نیست. مطمئنی؟")
+                .setPositiveButton("حذف کن") { _, _ ->
+                    PrefsHelper.deleteParagraphAt(this, partNumber - 1)
+                    loadSavedParagraphsIntoAdapter()
+                    Toast.makeText(this, "پارت حذف شد", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("انصراف", null)
+                .show()
+        }
     }
 
     // متن هر پارت رو با نشونه‌های MARK دور کلمات تکراری تبدیل به یه Spannable قرمز/زیرخط‌دار می‌کنه
@@ -261,6 +274,42 @@ class WordShuffleActivity : AppCompatActivity() {
             row.addView(addWordBtn)
             row.addView(deleteBtn)
             container.addView(row)
+        }
+
+        val trashed = PrefsHelper.getTrashedLists(this)
+        if (trashed.isNotEmpty()) {
+            val trashHeader = TextView(this).apply {
+                text = "🗑 سطل زباله (تا ۴۸ ساعت قابل بازگردانیه)"
+                setPadding(0, 16, 0, 4)
+                textSize = 13f
+            }
+            container.addView(trashHeader)
+
+            for ((name, deletedAt, wordCount) in trashed) {
+                val elapsedMs = System.currentTimeMillis() - deletedAt
+                val hoursLeft = ((PrefsHelper.getTrashRetentionMs() - elapsedMs) / (60 * 60 * 1000)).coerceAtLeast(0)
+
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                }
+                val label = TextView(this).apply {
+                    text = "$name ($wordCount کلمه) - $hoursLeft ساعت مونده"
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                val restoreBtn = Button(this).apply {
+                    text = "بازگردانی"
+                    textSize = 12f
+                    setOnClickListener {
+                        PrefsHelper.restoreWordList(this@WordShuffleActivity, name)
+                        refreshSavedListsUI(container)
+                        Toast.makeText(this@WordShuffleActivity, "بازگردانده شد", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                row.addView(label)
+                row.addView(restoreBtn)
+                container.addView(row)
+            }
         }
     }
 
