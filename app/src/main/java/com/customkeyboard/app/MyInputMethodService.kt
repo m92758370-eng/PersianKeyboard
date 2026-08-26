@@ -1,5 +1,6 @@
 package com.customkeyboard.app
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
@@ -7,7 +8,9 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.Toast
 
 class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
@@ -69,6 +72,38 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         if (!isAllowed()) return
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showInputMethodPicker()
+    }
+
+    override fun onSpaceDoubleTap() {
+        if (!isAllowed()) return
+        showSpaceLabelDialog()
+    }
+
+    private fun showSpaceLabelDialog() {
+        val edt = EditText(this)
+        edt.setText(PrefsHelper.getSpaceLabel(this))
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("متن جدید برای دکمه‌ی فاصله")
+            .setView(edt)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val newLabel = edt.text.toString().trim()
+                if (newLabel.isNotEmpty()) {
+                    PrefsHelper.setSpaceLabel(this, newLabel)
+                    keyboardView.updateSpaceLabel()
+                }
+            }
+            .setNegativeButton("انصراف", null)
+            .create()
+        // چون این دیالوگ از داخل یه InputMethodService باز می‌شه (نه یه Activity معمولی)،
+        // باید به window token خود کیبورد وصلش کنیم تا درست نمایش داده بشه
+        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG)
+        val token = this.window?.window?.decorView?.windowToken
+        if (token != null) {
+            dialog.window?.attributes = dialog.window?.attributes?.apply {
+                this.token = token
+            }
+        }
+        dialog.show()
     }
 
     override fun onAutoTypeButton() {
