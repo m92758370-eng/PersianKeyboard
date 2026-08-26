@@ -80,6 +80,33 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="ظاهر کیبورد (روز / شب)"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/txtThemeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="حالت فعلی: شب" />
+
+        <Button
+            android:id="@+id/btnToggleTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="تغییر به حالت روز" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginVertical="20dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="ابزارهای متنی"
             android:textStyle="bold"
             android:textSize="18sp"
