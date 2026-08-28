@@ -3,9 +3,9 @@ package com.customkeyboard.app
 object KeyboardLayouts {
 
     val PERSIAN: List<List<String>> = listOf(
-        listOf("ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "چ"),
+        listOf("ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج"),
         listOf("ش", "س", "ی", "ب", "ل", "ا", "ت", "ن", "م", "ک", "گ"),
-        listOf("ظ", "ط", "ژ", "ز", "ر", "ذ", "د", "پ", "و", ".", ",")
+        listOf("ظ", "ط", "ژ", "ز", "ر", "ذ", "د", "پ", "و", "چ")
     )
 
     val ENGLISH: List<List<String>> = listOf(
@@ -16,7 +16,7 @@ object KeyboardLayouts {
 
     // شماره‌ی کوچیکی که گوشه‌ی هر کلید ردیف اول نشون داده می‌شه (شبیه کیبورد سیستمی)
     val PERSIAN_ROW1_DIGIT_HINTS: List<String> =
-        listOf("١", "٢", "٣", "۴", "۵", "۶", "٧", "٨", "٩", "٠", "-", "/")
+        listOf("١", "٢", "٣", "۴", "۵", "۶", "٧", "٨", "٩", "٠", "-")
 
     // صفحه‌ی علائم/اعداد (وقتی رو دکمه‌ی زبان دو بار ضربه بزنی باز می‌شه)
     val SYMBOLS: List<List<String>> = listOf(
