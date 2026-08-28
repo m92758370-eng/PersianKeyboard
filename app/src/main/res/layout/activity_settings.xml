@@ -132,6 +132,13 @@
             android:layout_marginTop="8dp"
             android:text="دستیار هوش مصنوعی داستان‌نویسی" />
 
+        <Button
+            android:id="@+id/btnKeyLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="جابجایی دستی چیدمان کلیدها" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
