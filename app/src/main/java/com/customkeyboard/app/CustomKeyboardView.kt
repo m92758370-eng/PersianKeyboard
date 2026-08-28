@@ -93,8 +93,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var backgroundW = -1
     private var backgroundH = -1
     private var fallbackBgColor = Color.parseColor("#121212")
-    private var keyPadDp = 4f
-    private var keyCornerDp = 14f
+    private var keyPadDp = 3f
+    private var keyCornerDp = 6f
 
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
@@ -299,29 +299,42 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         rowHeight = h.toFloat() / totalRows
 
         for ((rowIndex, row) in contentRows.withIndex()) {
-            val keyWidth = w.toFloat() / row.size
+            val isLastContentRow = rowIndex == contentRows.size - 1
             val top = rowHeight * rowIndex
             val bottom = top + rowHeight
-            for ((colIndex, label) in row.withIndex()) {
-                val left = keyWidth * colIndex
-                val right = left + keyWidth
-                val hint = if (mode == KeyboardMode.LETTERS && usePersian && rowIndex == 0) {
-                    KeyboardLayouts.PERSIAN_ROW1_DIGIT_HINTS.getOrElse(colIndex) { "" }
-                } else {
-                    ""
+
+            if (isLastContentRow) {
+                val backW = w * 0.14f
+                val itemWidth = (w - backW) / row.size
+                for ((colIndex, label) in row.withIndex()) {
+                    val left = itemWidth * colIndex
+                    val right = left + itemWidth
+                    keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType))
                 }
-                keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType, hint))
+                val backLeft = w - backW
+                keys.add(KeyRect("⌫", RectF(backLeft, top, w.toFloat(), bottom), KeyType.BACKSPACE))
+            } else {
+                val keyWidth = w.toFloat() / row.size
+                for ((colIndex, label) in row.withIndex()) {
+                    val left = keyWidth * colIndex
+                    val right = left + keyWidth
+                    val hint = if (mode == KeyboardMode.LETTERS && usePersian && rowIndex == 0) {
+                        KeyboardLayouts.PERSIAN_ROW1_DIGIT_HINTS.getOrElse(colIndex) { "" }
+                    } else {
+                        ""
+                    }
+                    keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType, hint))
+                }
             }
         }
 
         val bottomTop = rowHeight * contentRows.size
         val bottomBottom = bottomTop + rowHeight
-        val switchW = w * 0.13f
-        val pauseW = w * 0.12f
-        val autoW = w * 0.13f
-        val backW = w * 0.15f
-        val enterW = w * 0.15f
-        val spaceW = w - switchW - pauseW - autoW - backW - enterW
+        val switchW = w * 0.15f
+        val pauseW = w * 0.14f
+        val autoW = w * 0.15f
+        val enterW = w * 0.17f
+        val spaceW = w - switchW - pauseW - autoW - enterW
 
         var x = 0f
         keys.add(KeyRect("", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
@@ -333,8 +346,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val spaceLabel = if (mode == KeyboardMode.NUMBERS) "٠" else PrefsHelper.getSpaceLabel(context)
         keys.add(KeyRect(spaceLabel, RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
-        keys.add(KeyRect("⌫", RectF(x, bottomTop, x + backW, bottomBottom), KeyType.BACKSPACE))
-        x += backW
         keys.add(KeyRect("⏎", RectF(x, bottomTop, x + enterW, bottomBottom), KeyType.ENTER))
     }
 
