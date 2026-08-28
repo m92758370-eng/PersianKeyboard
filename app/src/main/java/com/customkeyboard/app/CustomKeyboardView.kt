@@ -27,7 +27,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onEnter()
         fun onSpace()
         fun onSpaceLongPress()
-        fun onSpaceDoubleTap()
         fun onAutoTypeButton()
         fun onPauseResumeButton()
         fun onWordShuffleButton()
@@ -50,6 +49,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private var usePersian = true
     private val keys = mutableListOf<KeyRect>()
+
+    private var editingSpaceLabel = false
+    private val spaceLabelBuffer = StringBuilder()
 
     private val keyPaint = Paint().apply {
         color = Color.parseColor("#992A2A2A")
@@ -321,6 +323,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         for (key in keys) {
             val paint = when {
                 key.label == highlightedLabel -> highlightPaint
+                editingSpaceLabel && key.type == KeyType.AUTOTYPE -> accentPaint
+                editingSpaceLabel && key.type == KeyType.LANG_SWITCH -> highlightPaint
                 key.type == KeyType.ENTER -> accentPaint
                 key.type == KeyType.LETTER -> keyPaint
                 else -> specialKeyPaint
@@ -335,16 +339,27 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
 
             if (key.type == KeyType.SPACE) {
+                val displayText = if (editingSpaceLabel) spaceLabelBuffer.toString() + "│" else key.label
                 val spaceTextPaint = Paint(textPaint).apply {
                     textSize = rowHeight * 0.22f
                 }
-                canvas.drawText(key.label, cx, cy, spaceTextPaint)
+                canvas.drawText(displayText, cx, cy, spaceTextPaint)
             } else if (key.type == KeyType.PAUSE_RESUME) {
                 drawArrowIcon(canvas, key.rect)
             } else if (key.type == KeyType.AUTOTYPE) {
-                drawSmileyIcon(canvas, key.rect)
+                if (editingSpaceLabel) {
+                    val savePaint = Paint(textPaint).apply { textSize = rowHeight * 0.2f }
+                    canvas.drawText("ذخیره", cx, cy, savePaint)
+                } else {
+                    drawSmileyIcon(canvas, key.rect)
+                }
             } else if (key.type == KeyType.LANG_SWITCH) {
-                drawGlobeIcon(canvas, key.rect)
+                if (editingSpaceLabel) {
+                    val cancelPaint = Paint(textPaint).apply { textSize = rowHeight * 0.2f }
+                    canvas.drawText("لغو", cx, cy, cancelPaint)
+                } else {
+                    drawGlobeIcon(canvas, key.rect)
+                }
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -369,19 +384,31 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 val key = keys.firstOrNull { it.rect.contains(x, y) } ?: return true
                 when (key.type) {
                     KeyType.SPACE -> {
-                        spacePressed = true
-                        spacePointerId = pointerId
-                        spaceLongPressTriggered = false
-                        val now = System.currentTimeMillis()
-                        spaceDoubleTapCandidate = (now - lastSpaceUpTime) < 300L
-                        handler.postDelayed(spaceLongPressRunnable, SPACE_LONG_PRESS_MS)
+                        if (editingSpaceLabel) {
+                            spaceLabelBuffer.append(" ")
+                            invalidate()
+                        } else {
+                            spacePressed = true
+                            spacePointerId = pointerId
+                            spaceLongPressTriggered = false
+                            val now = System.currentTimeMillis()
+                            spaceDoubleTapCandidate = (now - lastSpaceUpTime) < 300L
+                            handler.postDelayed(spaceLongPressRunnable, SPACE_LONG_PRESS_MS)
+                        }
                     }
                     KeyType.BACKSPACE -> {
-                        backspacePressed = true
-                        backspacePointerId = pointerId
-                        backspaceRepeatCount = 0
-                        listener?.onBackspace()
-                        handler.postDelayed(backspaceRunnable, BACKSPACE_INITIAL_DELAY_MS)
+                        if (editingSpaceLabel) {
+                            if (spaceLabelBuffer.isNotEmpty()) {
+                                spaceLabelBuffer.deleteCharAt(spaceLabelBuffer.length - 1)
+                            }
+                            invalidate()
+                        } else {
+                            backspacePressed = true
+                            backspacePointerId = pointerId
+                            backspaceRepeatCount = 0
+                            listener?.onBackspace()
+                            handler.postDelayed(backspaceRunnable, BACKSPACE_INITIAL_DELAY_MS)
+                        }
                     }
                     else -> dispatchKey(key)
                 }
@@ -391,7 +418,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     handler.removeCallbacks(spaceLongPressRunnable)
                     if (!spaceLongPressTriggered) {
                         if (spaceDoubleTapCandidate) {
-                            listener?.onSpaceDoubleTap()
+                            editingSpaceLabel = true
+                            spaceLabelBuffer.setLength(0)
+                            spaceLabelBuffer.append(PrefsHelper.getSpaceLabel(context))
+                            invalidate()
                             lastSpaceUpTime = 0L
                         } else {
                             listener?.onSpace()
@@ -420,6 +450,30 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun dispatchKey(key: KeyRect) {
+        if (editingSpaceLabel) {
+            when (key.type) {
+                KeyType.LETTER -> {
+                    spaceLabelBuffer.append(key.label)
+                    flashKey(key.label)
+                    invalidate()
+                }
+                KeyType.AUTOTYPE, KeyType.ENTER -> {
+                    val newLabel = spaceLabelBuffer.toString().trim()
+                    if (newLabel.isNotEmpty()) {
+                        PrefsHelper.setSpaceLabel(context, newLabel)
+                    }
+                    editingSpaceLabel = false
+                    rebuildKeys(width, height)
+                    invalidate()
+                }
+                KeyType.LANG_SWITCH -> {
+                    editingSpaceLabel = false
+                    invalidate()
+                }
+                else -> {}
+            }
+            return
+        }
         when (key.type) {
             KeyType.SPACE -> listener?.onSpace()
             KeyType.BACKSPACE -> listener?.onBackspace()
