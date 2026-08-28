@@ -34,12 +34,14 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE }
+    private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS }
 
     private data class KeyRect(
         val label: String,
         val rect: RectF,
-        val type: KeyType
+        val type: KeyType,
+        val subLabel: String = ""
     )
 
     companion object {
@@ -49,6 +51,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private var usePersian = true
     private val keys = mutableListOf<KeyRect>()
+    private var mode = KeyboardMode.LETTERS
 
     private var editingSpaceLabel = false
     private val spaceLabelBuffer = StringBuilder()
@@ -90,6 +93,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var backgroundW = -1
     private var backgroundH = -1
     private var fallbackBgColor = Color.parseColor("#121212")
+    private var keyPadDp = 4f
+    private var keyCornerDp = 14f
 
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
@@ -121,6 +126,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             handler.postDelayed(this, nextDelay)
         }
     }
+
+    private var langPressed = false
+    private var langPointerId = -1
+    private var lastLangUpTime = 0L
+    private var langDoubleTapCandidate = false
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val heightPx = (230 * context.resources.displayMetrics.density).toInt()
@@ -160,8 +170,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundBitmap = if (resId != 0) {
             val original = BitmapFactory.decodeResource(resources, resId)
             centerCrop(original, w, h)
-        } else if (PrefsHelper.isDarkMode(context)) {
-            generateGrungeTexture(w, h)
         } else {
             null
         }
@@ -178,18 +186,20 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private fun applyThemeColors() {
         if (PrefsHelper.isDarkMode(context)) {
-            keyPaint.color = Color.parseColor("#992A2A2A")
-            specialKeyPaint.color = Color.parseColor("#991A1A1A")
+            keyPaint.color = Color.parseColor("#FF353238")
+            specialKeyPaint.color = Color.parseColor("#FF3D3238")
+            accentPaint.color = Color.parseColor("#FF4A3540")
             textPaint.color = Color.WHITE
             labelPaint.color = Color.parseColor("#BBBBBB")
             overlayPaint.color = Color.parseColor("#66000000")
-            fallbackBgColor = Color.parseColor("#121212")
+            fallbackBgColor = Color.parseColor("#000000")
             arrowIconPaint.color = Color.WHITE
             smileyStrokePaint.color = Color.WHITE
             smileyDotPaint.color = Color.WHITE
         } else {
             keyPaint.color = Color.parseColor("#99FFFFFF")
             specialKeyPaint.color = Color.parseColor("#99DDDDDD")
+            accentPaint.color = Color.parseColor("#4A90E2")
             textPaint.color = Color.BLACK
             labelPaint.color = Color.parseColor("#555555")
             overlayPaint.color = Color.parseColor("#11000000")
@@ -269,26 +279,42 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         invalidate()
     }
 
+    private fun getPersianLetterRows(): List<List<String>> {
+        val custom = PrefsHelper.getCustomPersianOrder(context) ?: return KeyboardLayouts.PERSIAN
+        return KeyboardLayouts.chunkToRows(custom, KeyboardLayouts.persianRowSizes())
+    }
+
     private fun rebuildKeys(w: Int, h: Int) {
         keys.clear()
         if (w == 0 || h == 0) return
 
-        val letterRows = if (usePersian) KeyboardLayouts.PERSIAN else KeyboardLayouts.ENGLISH
-        val totalRows = letterRows.size + 1
+        val contentRows: List<List<String>> = when (mode) {
+            KeyboardMode.LETTERS -> if (usePersian) getPersianLetterRows() else KeyboardLayouts.ENGLISH
+            KeyboardMode.SYMBOLS -> KeyboardLayouts.SYMBOLS
+            KeyboardMode.NUMBERS -> KeyboardLayouts.NUMBERS
+        }
+        val contentKeyType = if (mode == KeyboardMode.LETTERS) KeyType.LETTER else KeyType.SYMBOL
+
+        val totalRows = contentRows.size + 1
         rowHeight = h.toFloat() / totalRows
 
-        for ((rowIndex, row) in letterRows.withIndex()) {
+        for ((rowIndex, row) in contentRows.withIndex()) {
             val keyWidth = w.toFloat() / row.size
             val top = rowHeight * rowIndex
             val bottom = top + rowHeight
             for ((colIndex, label) in row.withIndex()) {
                 val left = keyWidth * colIndex
                 val right = left + keyWidth
-                keys.add(KeyRect(label, RectF(left, top, right, bottom), KeyType.LETTER))
+                val hint = if (mode == KeyboardMode.LETTERS && usePersian && rowIndex == 0) {
+                    KeyboardLayouts.PERSIAN_ROW1_DIGIT_HINTS.getOrElse(colIndex) { "" }
+                } else {
+                    ""
+                }
+                keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType, hint))
             }
         }
 
-        val bottomTop = rowHeight * letterRows.size
+        val bottomTop = rowHeight * contentRows.size
         val bottomBottom = bottomTop + rowHeight
         val switchW = w * 0.13f
         val pauseW = w * 0.12f
@@ -304,7 +330,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += pauseW
         keys.add(KeyRect("", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
-        keys.add(KeyRect(PrefsHelper.getSpaceLabel(context), RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
+        val spaceLabel = if (mode == KeyboardMode.NUMBERS) "٠" else PrefsHelper.getSpaceLabel(context)
+        keys.add(KeyRect(spaceLabel, RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
         keys.add(KeyRect("⌫", RectF(x, bottomTop, x + backW, bottomBottom), KeyType.BACKSPACE))
         x += backW
@@ -325,12 +352,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.label == highlightedLabel -> highlightPaint
                 editingSpaceLabel && key.type == KeyType.AUTOTYPE -> accentPaint
                 editingSpaceLabel && key.type == KeyType.LANG_SWITCH -> highlightPaint
-                key.type == KeyType.ENTER -> accentPaint
-                key.type == KeyType.LETTER -> keyPaint
+                key.type == KeyType.ENTER || key.type == KeyType.BACKSPACE -> accentPaint
+                key.type == KeyType.LETTER || key.type == KeyType.SYMBOL -> keyPaint
                 else -> specialKeyPaint
             }
-            val pad = 4f * density
-            val corner = 14f * density
+            val pad = keyPadDp * density
+            val corner = keyCornerDp * density
             canvas.drawRoundRect(
                 RectF(key.rect.left + pad, key.rect.top + pad, key.rect.right - pad, key.rect.bottom - pad),
                 corner, corner, paint
@@ -345,23 +372,33 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 }
                 canvas.drawText(displayText, cx, cy, spaceTextPaint)
             } else if (key.type == KeyType.PAUSE_RESUME) {
-                drawArrowIcon(canvas, key.rect)
+                when {
+                    mode == KeyboardMode.SYMBOLS -> canvas.drawText("١٢٣", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
+                    mode == KeyboardMode.NUMBERS -> canvas.drawText("؟", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.24f })
+                    else -> drawArrowIcon(canvas, key.rect)
+                }
             } else if (key.type == KeyType.AUTOTYPE) {
-                if (editingSpaceLabel) {
-                    val savePaint = Paint(textPaint).apply { textSize = rowHeight * 0.2f }
-                    canvas.drawText("ذخیره", cx, cy, savePaint)
-                } else {
-                    drawSmileyIcon(canvas, key.rect)
+                when {
+                    editingSpaceLabel -> canvas.drawText("ذخیره", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
+                    mode == KeyboardMode.NUMBERS -> canvas.drawText(".", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.3f })
+                    else -> drawSmileyIcon(canvas, key.rect)
                 }
             } else if (key.type == KeyType.LANG_SWITCH) {
-                if (editingSpaceLabel) {
-                    val cancelPaint = Paint(textPaint).apply { textSize = rowHeight * 0.2f }
-                    canvas.drawText("لغو", cx, cy, cancelPaint)
-                } else {
-                    drawGlobeIcon(canvas, key.rect)
+                when {
+                    editingSpaceLabel -> canvas.drawText("لغو", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
+                    mode != KeyboardMode.LETTERS -> canvas.drawText("ابپ", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
+                    else -> drawGlobeIcon(canvas, key.rect)
                 }
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
+            }
+
+            if (key.subLabel.isNotEmpty()) {
+                val hintPaint = Paint(labelPaint).apply {
+                    textAlign = Paint.Align.RIGHT
+                    textSize = rowHeight * 0.16f
+                }
+                canvas.drawText(key.subLabel, key.rect.right - 8f * density, key.rect.top + rowHeight * 0.24f, hintPaint)
             }
 
             if (key.type == KeyType.LETTER) {
@@ -410,6 +447,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                             handler.postDelayed(backspaceRunnable, BACKSPACE_INITIAL_DELAY_MS)
                         }
                     }
+                    KeyType.LANG_SWITCH -> {
+                        if (editingSpaceLabel) {
+                            editingSpaceLabel = false
+                            invalidate()
+                        } else {
+                            langPressed = true
+                            langPointerId = pointerId
+                            val now = System.currentTimeMillis()
+                            langDoubleTapCandidate = (now - lastLangUpTime) < 300L
+                        }
+                    }
                     else -> dispatchKey(key)
                 }
             }
@@ -424,11 +472,32 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                             invalidate()
                             lastSpaceUpTime = 0L
                         } else {
-                            listener?.onSpace()
+                            if (mode == KeyboardMode.NUMBERS) {
+                                listener?.onCommitText("٠")
+                            } else {
+                                listener?.onSpace()
+                            }
                             lastSpaceUpTime = System.currentTimeMillis()
                         }
                     }
                     spacePressed = false
+                }
+                if (langPressed && pointerId == langPointerId) {
+                    if (mode != KeyboardMode.LETTERS) {
+                        mode = KeyboardMode.LETTERS
+                        rebuildKeys(width, height)
+                        invalidate()
+                        lastLangUpTime = 0L
+                    } else if (langDoubleTapCandidate) {
+                        mode = KeyboardMode.SYMBOLS
+                        rebuildKeys(width, height)
+                        invalidate()
+                        lastLangUpTime = 0L
+                    } else {
+                        setLanguage(!usePersian)
+                        lastLangUpTime = System.currentTimeMillis()
+                    }
+                    langPressed = false
                 }
                 if (backspacePressed && pointerId == backspacePointerId) {
                     handler.removeCallbacks(backspaceRunnable)
@@ -439,6 +508,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 if (spacePressed) {
                     handler.removeCallbacks(spaceLongPressRunnable)
                     spacePressed = false
+                }
+                if (langPressed) {
+                    langPressed = false
                 }
                 if (backspacePressed) {
                     handler.removeCallbacks(backspaceRunnable)
@@ -452,7 +524,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun dispatchKey(key: KeyRect) {
         if (editingSpaceLabel) {
             when (key.type) {
-                KeyType.LETTER -> {
+                KeyType.LETTER, KeyType.SYMBOL -> {
                     spaceLabelBuffer.append(key.label)
                     flashKey(key.label)
                     invalidate()
@@ -466,23 +538,42 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     rebuildKeys(width, height)
                     invalidate()
                 }
-                KeyType.LANG_SWITCH -> {
-                    editingSpaceLabel = false
-                    invalidate()
-                }
                 else -> {}
             }
             return
         }
         when (key.type) {
-            KeyType.SPACE -> listener?.onSpace()
             KeyType.BACKSPACE -> listener?.onBackspace()
             KeyType.ENTER -> listener?.onEnter()
-            KeyType.LANG_SWITCH -> setLanguage(!usePersian)
-            KeyType.AUTOTYPE -> listener?.onAutoTypeButton()
-            KeyType.PAUSE_RESUME -> listener?.onPauseResumeButton()
+            KeyType.AUTOTYPE -> {
+                if (mode == KeyboardMode.NUMBERS) {
+                    listener?.onCommitText(".")
+                } else {
+                    listener?.onAutoTypeButton()
+                }
+            }
+            KeyType.PAUSE_RESUME -> {
+                when (mode) {
+                    KeyboardMode.SYMBOLS -> {
+                        mode = KeyboardMode.NUMBERS
+                        rebuildKeys(width, height)
+                        invalidate()
+                    }
+                    KeyboardMode.NUMBERS -> {
+                        mode = KeyboardMode.SYMBOLS
+                        rebuildKeys(width, height)
+                        invalidate()
+                    }
+                    KeyboardMode.LETTERS -> listener?.onPauseResumeButton()
+                }
+            }
             KeyType.WORD_SHUFFLE -> listener?.onWordShuffleButton()
             KeyType.LETTER -> handleLetterTap(key.label)
+            KeyType.SYMBOL -> {
+                flashKey(key.label)
+                listener?.onCommitText(key.label)
+            }
+            else -> {}
         }
     }
 
