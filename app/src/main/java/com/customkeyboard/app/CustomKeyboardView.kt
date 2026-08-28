@@ -34,7 +34,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE }
     private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS }
 
     private data class KeyRect(
@@ -330,22 +330,25 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bottomTop = rowHeight * contentRows.size
         val bottomBottom = bottomTop + rowHeight
-        val switchW = w * 0.15f
-        val pauseW = w * 0.14f
-        val autoW = w * 0.15f
-        val enterW = w * 0.17f
-        val spaceW = w - switchW - pauseW - autoW - enterW
+        val symbolsToggleW = w * 0.12f
+        val autoW = w * 0.14f
+        val switchW = w * 0.14f
+        val pauseW = w * 0.13f
+        val enterW = w * 0.16f
+        val spaceW = w - symbolsToggleW - autoW - switchW - pauseW - enterW
 
         var x = 0f
-        keys.add(KeyRect("", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
-        x += switchW
-        keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
-        x += pauseW
+        keys.add(KeyRect("", RectF(x, bottomTop, x + symbolsToggleW, bottomBottom), KeyType.SYMBOLS_TOGGLE))
+        x += symbolsToggleW
         keys.add(KeyRect("", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
         x += autoW
+        keys.add(KeyRect("", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
+        x += switchW
         val spaceLabel = if (mode == KeyboardMode.NUMBERS) "٠" else PrefsHelper.getSpaceLabel(context)
         keys.add(KeyRect(spaceLabel, RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
         x += spaceW
+        keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
+        x += pauseW
         keys.add(KeyRect("⏎", RectF(x, bottomTop, x + enterW, bottomBottom), KeyType.ENTER))
     }
 
@@ -376,7 +379,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             val cx = key.rect.centerX()
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
 
-            if (key.type == KeyType.SPACE) {
+            if (key.type == KeyType.SYMBOLS_TOGGLE) {
+                val label = if (mode == KeyboardMode.LETTERS) "١٢٣" else "حروف"
+                canvas.drawText(label, cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
+            } else if (key.type == KeyType.SPACE) {
                 val displayText = if (editingSpaceLabel) spaceLabelBuffer.toString() + "│" else key.label
                 val spaceTextPaint = Paint(textPaint).apply {
                     textSize = rowHeight * 0.22f
@@ -579,6 +585,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 }
             }
             KeyType.WORD_SHUFFLE -> listener?.onWordShuffleButton()
+            KeyType.SYMBOLS_TOGGLE -> {
+                mode = if (mode == KeyboardMode.LETTERS) KeyboardMode.SYMBOLS else KeyboardMode.LETTERS
+                rebuildKeys(width, height)
+                invalidate()
+            }
             KeyType.LETTER -> handleLetterTap(key.label)
             KeyType.SYMBOL -> {
                 flashKey(key.label)
