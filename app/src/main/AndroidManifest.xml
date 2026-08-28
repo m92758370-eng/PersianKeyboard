@@ -36,6 +36,11 @@
             android:exported="true"
             android:label="دستیار داستان‌نویسی" />
 
+        <activity
+            android:name=".KeyLayoutActivity"
+            android:exported="true"
+            android:label="چیدمان دستی کلیدها" />
+
         <service
             android:name=".MyInputMethodService"
             android:permission="android.permission.BIND_INPUT_METHOD"
