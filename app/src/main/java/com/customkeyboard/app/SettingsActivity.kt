@@ -77,6 +77,10 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, AiWriterActivity::class.java))
         }
 
+        findViewById<Button>(R.id.btnKeyLayout).setOnClickListener {
+            startActivity(Intent(this, KeyLayoutActivity::class.java))
+        }
+
         buildLetterRows()
 
         txtBackgroundStatus = findViewById(R.id.txtBackgroundStatus)
