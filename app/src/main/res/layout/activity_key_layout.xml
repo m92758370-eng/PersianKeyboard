@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="چیدمان دستی حروف فارسی"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:textColor="#666666"
+        android:text="هر ردیف رو با نگه‌داشتن و کشیدن جابجا کن. ترتیب بالا به پایین همون ترتیب کلیدها رو تو کیبورد (ردیف اول، بعد دوم، بعد سوم) نشون می‌ده." />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewKeys"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/btnSaveKeyLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="ذخیره‌ی چیدمان" />
+
+    <Button
+        android:id="@+id/btnResetKeyLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="برگشت به چیدمان پیش‌فرض" />
+
+</LinearLayout>
