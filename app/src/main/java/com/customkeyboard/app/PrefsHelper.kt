@@ -32,6 +32,7 @@ object PrefsHelper {
     private const val KEY_SPACE_LABEL = "space_label"
     private const val DEFAULT_SPACE_LABEL = "کینگ آنتونی"
     private const val KEY_DARK_MODE = "dark_mode"
+    private const val KEY_CUSTOM_PERSIAN_ORDER = "custom_persian_key_order"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -322,5 +323,22 @@ object PrefsHelper {
 
     fun setDarkMode(context: Context, dark: Boolean) {
         prefs(context).edit().putBoolean(KEY_DARK_MODE, dark).apply()
+    }
+
+    // چیدمان دستی حروف فارسی: یه لیست تخت از ۳۴ حرف (به همون ترتیبی که کاربر جابجاشون کرده)
+    fun getCustomPersianOrder(context: Context): List<String>? {
+        val raw = prefs(context).getString(KEY_CUSTOM_PERSIAN_ORDER, "") ?: ""
+        if (raw.isEmpty()) return null
+        val list = raw.split(SEPARATOR).filter { it.isNotEmpty() }
+        val expectedSize = KeyboardLayouts.PERSIAN.flatten().size
+        return if (list.size == expectedSize) list else null
+    }
+
+    fun setCustomPersianOrder(context: Context, order: List<String>) {
+        prefs(context).edit().putString(KEY_CUSTOM_PERSIAN_ORDER, order.joinToString(SEPARATOR)).apply()
+    }
+
+    fun resetCustomPersianOrder(context: Context) {
+        prefs(context).edit().remove(KEY_CUSTOM_PERSIAN_ORDER).apply()
     }
 }
