@@ -617,6 +617,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                         invalidate()
                     }
                     KeyboardMode.LETTERS -> listener?.onPauseResumeButton()
+                    KeyboardMode.EMOJI -> listener?.onPauseResumeButton()
                 }
             }
             KeyType.WORD_SHUFFLE -> listener?.onWordShuffleButton()
