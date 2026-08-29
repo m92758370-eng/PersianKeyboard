@@ -26,6 +26,9 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Decode persistent signing key
+        run: base64 -d keystore.base64.txt > app/persian-keyboard.keystore
+
       - name: Build debug APK
         run: gradle assembleDebug
 
