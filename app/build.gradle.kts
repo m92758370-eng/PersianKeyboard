@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val persistentKeystore = file("persian-keyboard.keystore")
+
 android {
     namespace = "com.customkeyboard.app"
     compileSdk = 34
@@ -15,7 +17,23 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        if (persistentKeystore.exists()) {
+            create("persistent") {
+                storeFile = persistentKeystore
+                storePassword = "keyboard123"
+                keyAlias = "persiankeyboard"
+                keyPassword = "keyboard123"
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (persistentKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("persistent")
+            }
+        }
         release {
             isMinifyEnabled = false
         }
