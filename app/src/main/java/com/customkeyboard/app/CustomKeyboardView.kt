@@ -30,12 +30,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onAutoTypeButton()
         fun onPauseResumeButton()
         fun onWordShuffleButton()
+        fun onSettingsButton()
     }
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE }
-    private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID }
+    private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS, EMOJI }
 
     private data class KeyRect(
         val label: String,
@@ -47,6 +48,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     companion object {
         private const val SPACE_LONG_PRESS_MS = 2000L
         private const val BACKSPACE_INITIAL_DELAY_MS = 400L
+        private const val TOOLBAR_HEIGHT_DP = 42f
     }
 
     private var usePersian = true
@@ -133,7 +135,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var langDoubleTapCandidate = false
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val heightPx = (230 * context.resources.displayMetrics.density).toInt()
+        val heightPx = ((230 + TOOLBAR_HEIGHT_DP) * context.resources.displayMetrics.density).toInt()
         val width = MeasureSpec.getSize(widthMeasureSpec)
         setMeasuredDimension(width, heightPx)
     }
@@ -288,30 +290,48 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         keys.clear()
         if (w == 0 || h == 0) return
 
+        val toolbarHeight = TOOLBAR_HEIGHT_DP * density
+        val toolbarItemW = w / 6f
+        for (i in 0 until 6) {
+            val left = toolbarItemW * i
+            val right = left + toolbarItemW
+            val type = when (i) {
+                0 -> KeyType.TOOLBAR_MIC
+                1 -> KeyType.TOOLBAR_TRANSLATE
+                2 -> KeyType.TOOLBAR_SETTINGS
+                3 -> KeyType.TOOLBAR_EMOJI
+                4 -> KeyType.TOOLBAR_CLIPBOARD
+                else -> KeyType.TOOLBAR_GRID
+            }
+            keys.add(KeyRect("", RectF(left, 0f, right, toolbarHeight), type))
+        }
+
         val contentRows: List<List<String>> = when (mode) {
             KeyboardMode.LETTERS -> if (usePersian) getPersianLetterRows() else KeyboardLayouts.ENGLISH
             KeyboardMode.SYMBOLS -> KeyboardLayouts.SYMBOLS
             KeyboardMode.NUMBERS -> KeyboardLayouts.NUMBERS
+            KeyboardMode.EMOJI -> KeyboardLayouts.EMOJI
         }
         val contentKeyType = if (mode == KeyboardMode.LETTERS) KeyType.LETTER else KeyType.SYMBOL
 
+        val keyboardAreaHeight = h - toolbarHeight
         val totalRows = contentRows.size + 1
-        rowHeight = h.toFloat() / totalRows
+        rowHeight = keyboardAreaHeight / totalRows
 
         for ((rowIndex, row) in contentRows.withIndex()) {
             val isLastContentRow = rowIndex == contentRows.size - 1
-            val top = rowHeight * rowIndex
+            val top = toolbarHeight + rowHeight * rowIndex
             val bottom = top + rowHeight
 
             if (isLastContentRow) {
-                val backW = w * 0.14f
-                val itemWidth = (w - backW) / row.size
+                val totalCols = row.size + 1
+                val itemWidth = w.toFloat() / totalCols
                 for ((colIndex, label) in row.withIndex()) {
                     val left = itemWidth * colIndex
                     val right = left + itemWidth
                     keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType))
                 }
-                val backLeft = w - backW
+                val backLeft = itemWidth * row.size
                 keys.add(KeyRect("⌫", RectF(backLeft, top, w.toFloat(), bottom), KeyType.BACKSPACE))
             } else {
                 val keyWidth = w.toFloat() / row.size
@@ -328,7 +348,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             }
         }
 
-        val bottomTop = rowHeight * contentRows.size
+        val bottomTop = toolbarHeight + rowHeight * contentRows.size
         val bottomBottom = bottomTop + rowHeight
         val symbolsToggleW = w * 0.12f
         val autoW = w * 0.14f
@@ -362,6 +382,21 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         textPaint.textSize = rowHeight * 0.4f
 
         for (key in keys) {
+            if (key.type == KeyType.TOOLBAR_MIC || key.type == KeyType.TOOLBAR_TRANSLATE ||
+                key.type == KeyType.TOOLBAR_SETTINGS || key.type == KeyType.TOOLBAR_EMOJI ||
+                key.type == KeyType.TOOLBAR_CLIPBOARD || key.type == KeyType.TOOLBAR_GRID
+            ) {
+                when (key.type) {
+                    KeyType.TOOLBAR_MIC -> drawMicIcon(canvas, key.rect)
+                    KeyType.TOOLBAR_TRANSLATE -> drawTranslateIcon(canvas, key.rect)
+                    KeyType.TOOLBAR_SETTINGS -> drawGearIcon(canvas, key.rect)
+                    KeyType.TOOLBAR_EMOJI -> drawSmileyIcon(canvas, key.rect, key.rect.height() * 0.34f)
+                    KeyType.TOOLBAR_CLIPBOARD -> drawClipboardIcon(canvas, key.rect)
+                    KeyType.TOOLBAR_GRID -> drawGridIcon(canvas, key.rect)
+                    else -> {}
+                }
+                continue
+            }
             val paint = when {
                 key.label == highlightedLabel -> highlightPaint
                 editingSpaceLabel && key.type == KeyType.AUTOTYPE -> accentPaint
@@ -590,6 +625,24 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 rebuildKeys(width, height)
                 invalidate()
             }
+            KeyType.TOOLBAR_SETTINGS -> listener?.onSettingsButton()
+            KeyType.TOOLBAR_EMOJI -> {
+                mode = if (mode == KeyboardMode.EMOJI) KeyboardMode.LETTERS else KeyboardMode.EMOJI
+                rebuildKeys(width, height)
+                invalidate()
+            }
+            KeyType.TOOLBAR_CLIPBOARD -> {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                val clipText = clipboard?.primaryClip?.let { clip ->
+                    if (clip.itemCount > 0) clip.getItemAt(0).coerceToText(context)?.toString() else null
+                }
+                if (!clipText.isNullOrEmpty()) {
+                    listener?.onCommitText(clipText)
+                }
+            }
+            KeyType.TOOLBAR_MIC, KeyType.TOOLBAR_TRANSLATE, KeyType.TOOLBAR_GRID -> {
+                android.widget.Toast.makeText(context, "این بخش هنوز آماده نیست", android.widget.Toast.LENGTH_SHORT).show()
+            }
             KeyType.LETTER -> handleLetterTap(key.label)
             KeyType.SYMBOL -> {
                 flashKey(key.label)
@@ -644,11 +697,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         style = Paint.Style.FILL
     }
 
-    private fun drawSmileyIcon(canvas: Canvas, rect: RectF) {
+    private fun drawSmileyIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.17f) {
         smileyStrokePaint.strokeWidth = 1.6f * density
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val r = rowHeight * 0.17f
+        val r = radius
 
         canvas.drawCircle(cx, cy, r, smileyStrokePaint)
 
@@ -660,6 +713,71 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
         canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
+    }
+
+    private fun drawMicIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val h = rect.height() * 0.34f
+        val bodyW = h * 0.5f
+        val bodyRect = RectF(cx - bodyW / 2, cy - h * 0.55f, cx + bodyW / 2, cy + h * 0.15f)
+        canvas.drawRoundRect(bodyRect, bodyW / 2, bodyW / 2, smileyStrokePaint)
+        val standRect = RectF(cx - h * 0.42f, cy - h * 0.15f, cx + h * 0.42f, cy + h * 0.4f)
+        canvas.drawArc(standRect, 0f, 180f, false, smileyStrokePaint)
+        canvas.drawLine(cx, cy + h * 0.4f, cx, cy + h * 0.65f, smileyStrokePaint)
+        canvas.drawLine(cx - h * 0.3f, cy + h * 0.65f, cx + h * 0.3f, cy + h * 0.65f, smileyStrokePaint)
+    }
+
+    private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
+        val cx = rect.centerX()
+        val cy = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
+        val p = Paint(textPaint).apply { textSize = rect.height() * 0.32f }
+        canvas.drawText("A/ا", cx, cy, p)
+    }
+
+    private fun drawGearIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val r = rect.height() * 0.24f
+        canvas.drawCircle(cx, cy, r * 0.45f, smileyStrokePaint)
+        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
+        val toothLen = r * 0.35f
+        for (i in 0 until 8) {
+            val angle = Math.toRadians((i * 45).toDouble())
+            val x1 = cx + (r * Math.cos(angle)).toFloat()
+            val y1 = cy + (r * Math.sin(angle)).toFloat()
+            val x2 = cx + ((r + toothLen) * Math.cos(angle)).toFloat()
+            val y2 = cy + ((r + toothLen) * Math.sin(angle)).toFloat()
+            canvas.drawLine(x1, y1, x2, y2, smileyStrokePaint)
+        }
+    }
+
+    private fun drawClipboardIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val h = rect.height() * 0.34f
+        val w = h * 0.75f
+        val bodyRect = RectF(cx - w / 2, cy - h * 0.5f, cx + w / 2, cy + h * 0.55f)
+        canvas.drawRoundRect(bodyRect, 4f * density, 4f * density, smileyStrokePaint)
+        val clipRect = RectF(cx - w * 0.22f, cy - h * 0.68f, cx + w * 0.22f, cy - h * 0.42f)
+        canvas.drawRoundRect(clipRect, 3f * density, 3f * density, smileyStrokePaint)
+    }
+
+    private fun drawGridIcon(canvas: Canvas, rect: RectF) {
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val s = rect.height() * 0.11f
+        val gap = rect.height() * 0.06f
+        for (row in -1..0) {
+            for (col in -1..0) {
+                val left = cx + col * (s + gap) + gap / 2
+                val top = cy + row * (s + gap) + gap / 2
+                canvas.drawRoundRect(RectF(left, top, left + s, top + s), 2f * density, 2f * density, smileyDotPaint)
+            }
+        }
     }
 
     private fun drawGlobeIcon(canvas: Canvas, rect: RectF) {
