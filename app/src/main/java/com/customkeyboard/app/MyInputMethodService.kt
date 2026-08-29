@@ -109,6 +109,12 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
     }
+    override fun onSettingsButton() {
+        if (!isAllowed()) return
+        val intent = Intent(this, SettingsActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
 
     private fun startAutoType() {
         val text = PrefsHelper.getAutoTypeText(this)
