@@ -395,7 +395,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     KeyType.TOOLBAR_MIC -> drawMicIcon(canvas, key.rect)
                     KeyType.TOOLBAR_TRANSLATE -> drawTranslateIcon(canvas, key.rect)
                     KeyType.TOOLBAR_SETTINGS -> drawGearIcon(canvas, key.rect)
-                    KeyType.TOOLBAR_EMOJI -> drawSmileyIcon(canvas, key.rect, key.rect.height() * 0.34f)
+                    KeyType.TOOLBAR_EMOJI -> drawStickerIcon(canvas, key.rect)
                     KeyType.TOOLBAR_CLIPBOARD -> drawClipboardIcon(canvas, key.rect)
                     KeyType.TOOLBAR_GRID -> drawGridIcon(canvas, key.rect)
                     else -> {}
@@ -722,6 +722,48 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawCircle(cx + eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
 
         val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
+        canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
+    }
+
+    private fun drawStickerIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        smileyStrokePaint.strokeJoin = Paint.Join.ROUND
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val size = rect.height() * 0.38f
+        val half = size * 0.5f
+        val left = cx - half
+        val right = cx + half
+        val top = cy - half
+        val bottom = cy + half
+        val fold = size * 0.3f
+
+        val path = Path().apply {
+            moveTo(left, top)
+            lineTo(right - fold, top)
+            lineTo(right, top + fold)
+            lineTo(right, bottom)
+            lineTo(left, bottom)
+            close()
+        }
+        canvas.drawPath(path, smileyStrokePaint)
+
+        val foldPath = Path().apply {
+            moveTo(right - fold, top)
+            lineTo(right - fold, top + fold)
+            lineTo(right, top + fold)
+        }
+        canvas.drawPath(foldPath, smileyStrokePaint)
+
+        val faceR = size * 0.24f
+        val faceCx = cx - size * 0.06f
+        val faceCy = cy + size * 0.08f
+        val eyeR = faceR * 0.14f
+        val eyeOffsetX = faceR * 0.42f
+        val eyeOffsetY = faceR * 0.2f
+        canvas.drawCircle(faceCx - eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
+        canvas.drawCircle(faceCx + eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
+        val mouthRect = RectF(faceCx - faceR * 0.5f, faceCy - faceR * 0.25f, faceCx + faceR * 0.5f, faceCy + faceR * 0.5f)
         canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
     }
 
