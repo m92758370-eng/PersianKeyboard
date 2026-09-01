@@ -153,6 +153,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundW = w
         backgroundH = h
 
+        if (PrefsHelper.isDarkMode(context)) {
+            backgroundBitmap = null
+            return
+        }
+
         val customUriString = PrefsHelper.getBackgroundImageUri(context)
         if (customUriString != null) {
             try {
@@ -185,20 +190,32 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         loadBackground(width, height)
         invalidate()
     }
-
-    private fun applyThemeColors() {
+private fun applyThemeColors() {
         if (PrefsHelper.isDarkMode(context)) {
-            keyPaint.color = Color.parseColor("#FF353238")
-            specialKeyPaint.color = Color.parseColor("#FF3D3238")
-            accentPaint.color = Color.parseColor("#FF4A3540")
+            keyPaint.color = Color.parseColor("#FF2C2C2E")
+            specialKeyPaint.color = Color.parseColor("#FF232324")
+            accentPaint.color = Color.parseColor("#FF3A3A3C")
             textPaint.color = Color.WHITE
-            labelPaint.color = Color.parseColor("#BBBBBB")
-            overlayPaint.color = Color.parseColor("#66000000")
+            labelPaint.color = Color.parseColor("#8E8E93")
+            overlayPaint.color = Color.parseColor("#00000000")
             fallbackBgColor = Color.parseColor("#000000")
             arrowIconPaint.color = Color.WHITE
             smileyStrokePaint.color = Color.WHITE
             smileyDotPaint.color = Color.WHITE
         } else {
+            keyPaint.color = Color.parseColor("#99FFFFFF")
+            specialKeyPaint.color = Color.parseColor("#99DDDDDD")
+            accentPaint.color = Color.parseColor("#4A90E2")
+            textPaint.color = Color.BLACK
+            labelPaint.color = Color.parseColor("#555555")
+            overlayPaint.color = Color.parseColor("#11000000")
+            fallbackBgColor = Color.parseColor("#F0F0F0")
+            arrowIconPaint.color = Color.BLACK
+            smileyStrokePaint.color = Color.BLACK
+            smileyDotPaint.color = Color.BLACK
+        }
+    }
+    } else {
             keyPaint.color = Color.parseColor("#99FFFFFF")
             specialKeyPaint.color = Color.parseColor("#99DDDDDD")
             accentPaint.color = Color.parseColor("#4A90E2")
