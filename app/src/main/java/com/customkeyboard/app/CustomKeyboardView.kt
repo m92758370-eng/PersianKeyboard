@@ -438,7 +438,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 when {
                     editingSpaceLabel -> canvas.drawText("ذخیره", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
                     mode == KeyboardMode.NUMBERS -> canvas.drawText(".", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.3f })
-                    else -> drawSmileyIcon(canvas, key.rect)
+                    else -> drawAutoTypeIcon(canvas, key.rect)
                 }
             } else if (key.type == KeyType.LANG_SWITCH) {
                 when {
@@ -667,27 +667,31 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawArrowIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val triHeight = rowHeight * 0.16f
-        val triWidth = rowHeight * 0.11f
-        val gap = rowHeight * 0.14f
+        val triW = rowHeight * 0.09f
+        val triH = rowHeight * 0.13f
+        val gap = rowHeight * 0.16f
 
-        val leftCx = cx - gap
         val leftPath = Path().apply {
-            moveTo(leftCx + triWidth * 0.5f, cy - triHeight)
-            lineTo(leftCx - triWidth * 0.5f, cy)
-            lineTo(leftCx + triWidth * 0.5f, cy + triHeight)
+            moveTo(cx - gap + triW * 0.5f, cy - triH)
+            lineTo(cx - gap - triW * 0.5f, cy)
+            lineTo(cx - gap + triW * 0.5f, cy + triH)
             close()
         }
         canvas.drawPath(leftPath, arrowIconPaint)
 
-        val rightCx = cx + gap
         val rightPath = Path().apply {
-            moveTo(rightCx - triWidth * 0.5f, cy - triHeight)
-            lineTo(rightCx + triWidth * 0.5f, cy)
-            lineTo(rightCx - triWidth * 0.5f, cy + triHeight)
+            moveTo(cx + gap - triW * 0.5f, cy - triH)
+            lineTo(cx + gap + triW * 0.5f, cy)
+            lineTo(cx + gap - triW * 0.5f, cy + triH)
             close()
         }
         canvas.drawPath(rightPath, arrowIconPaint)
+
+        val dotR = rowHeight * 0.018f
+        val dotSpacing = rowHeight * 0.09f
+        for (i in -1..1) {
+            canvas.drawCircle(cx, cy + i * dotSpacing, dotR, smileyDotPaint)
+        }
     }
 
     private val smileyStrokePaint = Paint().apply {
@@ -719,6 +723,30 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
         canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
+    }
+
+    private fun drawAutoTypeIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.15f) {
+        smileyStrokePaint.strokeWidth = 1.6f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY() - radius * 0.55f
+        val r = radius
+
+        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
+
+        val eyeR = r * 0.11f
+        val eyeOffsetX = r * 0.38f
+        val eyeOffsetY = r * 0.22f
+        canvas.drawCircle(cx - eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
+        canvas.drawCircle(cx + eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
+
+        val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
+        canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
+
+        val commaPaint = Paint(textPaint).apply {
+            textSize = r * 1.3f
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("،", cx, cy + r * 1.9f, commaPaint)
     }
 
     private fun drawMicIcon(canvas: Canvas, rect: RectF) {
