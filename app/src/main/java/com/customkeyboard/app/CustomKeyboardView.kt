@@ -70,6 +70,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         color = Color.parseColor("#4A90E2")
         isAntiAlias = true
     }
+    private val enterAccentPaint = Paint().apply {
+        color = Color.parseColor("#5B8DEF")
+        isAntiAlias = true
+    }
     private val highlightPaint = Paint().apply {
         color = Color.parseColor("#E23B3B")
         isAntiAlias = true
@@ -406,7 +410,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.label == highlightedLabel -> highlightPaint
                 editingSpaceLabel && key.type == KeyType.AUTOTYPE -> accentPaint
                 editingSpaceLabel && key.type == KeyType.LANG_SWITCH -> highlightPaint
-                key.type == KeyType.ENTER || key.type == KeyType.BACKSPACE -> accentPaint
+                key.type == KeyType.ENTER -> enterAccentPaint
+                key.type == KeyType.BACKSPACE -> accentPaint
                 key.type == KeyType.LETTER || key.type == KeyType.SYMBOL -> keyPaint
                 else -> specialKeyPaint
             }
@@ -420,7 +425,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
 
             if (key.type == KeyType.SYMBOLS_TOGGLE) {
-                val label = if (mode == KeyboardMode.LETTERS) "١٢٣" else "حروف"
+                val label = if (mode == KeyboardMode.LETTERS) "؟١٢٣" else "حروف"
                 canvas.drawText(label, cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
             } else if (key.type == KeyType.SPACE) {
                 val displayText = if (editingSpaceLabel) spaceLabelBuffer.toString() + "│" else key.label
@@ -446,6 +451,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     mode != KeyboardMode.LETTERS -> canvas.drawText("ابپ", cx, cy, Paint(textPaint).apply { textSize = rowHeight * 0.2f })
                     else -> drawGlobeIcon(canvas, key.rect)
                 }
+            } else if (key.type == KeyType.ENTER) {
+                drawEnterIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -878,6 +885,30 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
     }
 
+    private fun drawEnterIcon(canvas: Canvas, rect: RectF) {
+        val enterIconPaint = Paint().apply {
+            color = Color.WHITE
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeWidth = 2.0f * density
+            strokeCap = Paint.Cap.ROUND
+        }
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val w = rowHeight * 0.16f
+        val h = rowHeight * 0.12f
+
+        canvas.drawLine(cx - w, cy, cx + w, cy, enterIconPaint)
+
+        val headSize = rowHeight * 0.09f
+        val headPath = Path().apply {
+            moveTo(cx + w - headSize, cy - headSize)
+            lineTo(cx + w, cy)
+            lineTo(cx + w - headSize, cy + headSize)
+        }
+        canvas.drawPath(headPath, enterIconPaint)
+    }
+
     private fun drawGlobeIcon(canvas: Canvas, rect: RectF) {
         smileyStrokePaint.strokeWidth = 1.6f * density
         val cx = rect.centerX()
@@ -888,6 +919,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawLine(cx - r, cy, cx + r, cy, smileyStrokePaint)
         val vOval = RectF(cx - r * 0.42f, cy - r, cx + r * 0.42f, cy + r)
         canvas.drawOval(vOval, smileyStrokePaint)
+
+        val latOval1 = RectF(cx - r, cy - r * 1.15f, cx + r, cy - r * 0.15f)
+        canvas.drawArc(latOval1, 200f, 140f, false, smileyStrokePaint)
+        val latOval2 = RectF(cx - r, cy + r * 0.15f, cx + r, cy + r * 1.15f)
+        canvas.drawArc(latOval2, 20f, 140f, false, smileyStrokePaint)
     }
 
     private fun handleLetterTap(label: String) {
