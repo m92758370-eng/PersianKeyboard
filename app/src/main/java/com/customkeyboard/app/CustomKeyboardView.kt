@@ -190,7 +190,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         loadBackground(width, height)
         invalidate()
     }
-private fun applyThemeColors() {
+
+    private fun applyThemeColors() {
         if (PrefsHelper.isDarkMode(context)) {
             keyPaint.color = Color.parseColor("#FF2C2C2E")
             specialKeyPaint.color = Color.parseColor("#FF232324")
@@ -203,19 +204,6 @@ private fun applyThemeColors() {
             smileyStrokePaint.color = Color.WHITE
             smileyDotPaint.color = Color.WHITE
         } else {
-            keyPaint.color = Color.parseColor("#99FFFFFF")
-            specialKeyPaint.color = Color.parseColor("#99DDDDDD")
-            accentPaint.color = Color.parseColor("#4A90E2")
-            textPaint.color = Color.BLACK
-            labelPaint.color = Color.parseColor("#555555")
-            overlayPaint.color = Color.parseColor("#11000000")
-            fallbackBgColor = Color.parseColor("#F0F0F0")
-            arrowIconPaint.color = Color.BLACK
-            smileyStrokePaint.color = Color.BLACK
-            smileyDotPaint.color = Color.BLACK
-        }
-    }
-    } else {
             keyPaint.color = Color.parseColor("#99FFFFFF")
             specialKeyPaint.color = Color.parseColor("#99DDDDDD")
             accentPaint.color = Color.parseColor("#4A90E2")
@@ -749,9 +737,31 @@ private fun applyThemeColors() {
 
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
-        val cy = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
-        val p = Paint(textPaint).apply { textSize = rect.height() * 0.32f }
-        canvas.drawText("A/ا", cx, cy, p)
+        val cy = rect.centerY()
+        val size = rect.height() * 0.32f
+        val bigPaint = Paint(textPaint).apply { textSize = size; textAlign = Paint.Align.CENTER }
+        val smallPaint = Paint(textPaint).apply { textSize = size * 0.6f; textAlign = Paint.Align.CENTER }
+        val offsetX = size * 0.34f
+        val offsetY = size * 0.30f
+
+        canvas.drawText(
+            "A",
+            cx - offsetX,
+            cy - offsetY - (bigPaint.descent() + bigPaint.ascent()) / 2,
+            bigPaint
+        )
+        canvas.drawText(
+            "ا",
+            cx + offsetX,
+            cy + offsetY - (smallPaint.descent() + smallPaint.ascent()) / 2,
+            smallPaint
+        )
+        val underlineY = cy + offsetY + size * 0.22f
+        canvas.drawLine(
+            cx + offsetX - size * 0.3f, underlineY,
+            cx + offsetX + size * 0.3f, underlineY,
+            smileyStrokePaint
+        )
     }
 
     private fun drawGearIcon(canvas: Canvas, rect: RectF) {
