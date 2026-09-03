@@ -142,8 +142,9 @@ class OverlapFinderActivity : AppCompatActivity() {
         }
     }
 
+    // کلمه‌ها رو با هر ترکیبی از فاصله‌ی معمولی، خط جدید، یا نیم‌فاصله (‌ZWNJ) از هم جدا می‌کنه
     private fun tokenize(text: String): List<String> =
-        Regex("\\S+").findAll(text).map { it.value }.toList()
+        Regex("[^\\s\u200c]+").findAll(text).map { it.value }.toList()
 
     // بین همه‌ی جفت‌پارت‌ها می‌گرده و فقط خودِ عبارت‌های مشترک رو (بدون تکرار) برمی‌گردونه
     private fun computeOverlaps(texts: List<String>, minLen: Int): List<String> {
