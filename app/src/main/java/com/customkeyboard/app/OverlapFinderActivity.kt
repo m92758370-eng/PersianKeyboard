@@ -1,7 +1,6 @@
 package com.customkeyboard.app
 
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +8,7 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
 import android.text.style.UnderlineSpan
+import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -21,10 +21,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.util.concurrent.Executors
 
+/**
+ * «الصاق‌گیر»: چند پارت متن گرفته می‌شه و فقط اون دنباله‌های کلمه‌ای که
+ * عیناً بین حداقل دو تا از پارت‌ها مشترک باشن (حتی اگه جمله‌ی کامل نباشن)
+ * به‌صورت یه لیست تک و بدون تکرار (بدون نمایش کل متن هر پارت) برگردونده می‌شه.
+ */
 class OverlapFinderActivity : AppCompatActivity() {
 
-    private data class WordToken(val text: String, val range: IntRange)
-    private data class PartResult(val originalText: String, val tokens: List<WordToken>, val matchedIndices: Set<Int>)
     private data class PartRow(val container: LinearLayout, val labelView: TextView, val editText: EditText)
 
     private val partRows = mutableListOf<PartRow>()
@@ -130,48 +133,41 @@ class OverlapFinderActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
 
         executor.execute {
-            val results = computeOverlaps(texts, minLen)
+            val phrases = computeOverlaps(texts, minLen)
             mainHandler.post {
                 progressBar.visibility = View.GONE
                 btnFindOverlap.isEnabled = true
-                showResults(results)
+                showResults(phrases)
             }
         }
     }
 
-    private fun tokenize(text: String): List<WordToken> {
-        val tokens = mutableListOf<WordToken>()
-        for (match in Regex("\\S+").findAll(text)) {
-            tokens.add(WordToken(match.value, match.range))
-        }
-        return tokens
-    }
+    private fun tokenize(text: String): List<String> =
+        Regex("\\S+").findAll(text).map { it.value }.toList()
 
-    private fun computeOverlaps(texts: List<String>, minLen: Int): List<PartResult> {
-        val tokenLists = texts.map { tokenize(it) }
-        val wordArrays = tokenLists.map { list -> list.map { it.text } }
-        val matched = Array(texts.size) { mutableSetOf<Int>() }
+    // بین همه‌ی جفت‌پارت‌ها می‌گرده و فقط خودِ عبارت‌های مشترک رو (بدون تکرار) برمی‌گردونه
+    private fun computeOverlaps(texts: List<String>, minLen: Int): List<String> {
+        val wordArrays = texts.map { tokenize(it) }
+        val phrases = LinkedHashSet<String>()
 
         for (i in texts.indices) {
             for (j in i + 1 until texts.size) {
                 val a = wordArrays[i]
                 val b = wordArrays[j]
                 if (a.isEmpty() || b.isEmpty()) continue
-                val (matchedA, matchedB) = findMaximalRuns(a, b, minLen)
-                matched[i].addAll(matchedA)
-                matched[j].addAll(matchedB)
+                collectMaximalRunPhrases(a, b, minLen, phrases)
             }
         }
 
-        return texts.indices.map { idx -> PartResult(texts[idx], tokenLists[idx], matched[idx]) }
+        return phrases.toList()
     }
 
-    private fun findMaximalRuns(a: List<String>, b: List<String>, minLen: Int): Pair<Set<Int>, Set<Int>> {
+    // پیدا کردن همه‌ی دنباله‌های حداکثریِ کلمات مشترک (پشت‌سرهم) بین دو لیست کلمه،
+    // با یه DP شبیه LCS ولی فقط برای دنباله‌های پیوسته (نه هر جفت مشترک پراکنده)
+    private fun collectMaximalRunPhrases(a: List<String>, b: List<String>, minLen: Int, out: MutableSet<String>) {
         val n = a.size
         val m = b.size
         var prevRow = IntArray(m + 1)
-        val matchedA = mutableSetOf<Int>()
-        val matchedB = mutableSetOf<Int>()
 
         for (i in 1..n) {
             val currRow = IntArray(m + 1)
@@ -181,93 +177,51 @@ class OverlapFinderActivity : AppCompatActivity() {
                 if (len > 0) {
                     val extends = i < n && j < m && a[i] == b[j]
                     if (!extends && len >= minLen) {
-                        for (k in 0 until len) {
-                            matchedA.add(i - 1 - k)
-                            matchedB.add(j - 1 - k)
-                        }
+                        out.add(a.subList(i - len, i).joinToString(" "))
                     }
                 }
             }
             prevRow = currRow
         }
-
-        return matchedA to matchedB
     }
 
-    private fun buildSpannable(result: PartResult): SpannableStringBuilder {
-        val builder = SpannableStringBuilder(result.originalText)
-        if (result.matchedIndices.isEmpty()) return builder
-
-        fun applySpan(startIdx: Int, endIdx: Int) {
-            val startChar = result.tokens[startIdx].range.first
-            val endChar = result.tokens[endIdx].range.last + 1
-            builder.setSpan(ForegroundColorSpan(Color.RED), startChar, endChar, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            builder.setSpan(UnderlineSpan(), startChar, endChar, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-
-        val sortedIdx = result.matchedIndices.sorted()
-        var runStart = sortedIdx[0]
-        var prev = sortedIdx[0]
-        for (k in 1 until sortedIdx.size) {
-            val cur = sortedIdx[k]
-            if (cur != prev + 1) {
-                applySpan(runStart, prev)
-                runStart = cur
-            }
-            prev = cur
-        }
-        applySpan(runStart, prev)
-
+    private fun underlinedRed(text: String): SpannableStringBuilder {
+        val builder = SpannableStringBuilder(text)
+        builder.setSpan(ForegroundColorSpan(Color.RED), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        builder.setSpan(UnderlineSpan(), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         return builder
     }
 
-    private fun showResults(results: List<PartResult>) {
+    private fun showResults(phrases: List<String>) {
         resultsContainer.removeAllViews()
         val density = resources.displayMetrics.density
 
-        for ((idx, result) in results.withIndex()) {
-            val label = TextView(this).apply {
-                text = "پارت ${idx + 1}"
+        if (phrases.isEmpty()) {
+            val note = TextView(this).apply {
+                text = "هیچ عبارت مشترکی پیدا نشد"
+                setTextColor(Color.parseColor("#888888"))
+            }
+            resultsContainer.addView(note)
+            return
+        }
+
+        for ((idx, phrase) in phrases.withIndex()) {
+            val numberLabel = TextView(this).apply {
+                text = "${idx + 1}."
                 setTypeface(typeface, Typeface.BOLD)
-                textSize = 15f
-                setPadding(0, 0, 0, (4 * density).toInt())
+                textSize = 13f
+                setTextColor(Color.parseColor("#888888"))
             }
 
             val body = TextView(this).apply {
-                text = buildSpannable(result)
+                text = underlinedRed(phrase)
                 setTextIsSelectable(true)
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
+                textSize = 15f
+                setPadding(0, (2 * density).toInt(), 0, (10 * density).toInt())
             }
 
-            resultsContainer.addView(label)
+            resultsContainer.addView(numberLabel)
             resultsContainer.addView(body)
-
-            if (result.matchedIndices.isEmpty()) {
-                val note = TextView(this).apply {
-                    text = "بدون اشتراک با پارت‌های دیگه"
-                    setTextColor(Color.parseColor("#888888"))
-                    textSize = 12f
-                    setPadding(0, (4 * density).toInt(), 0, 0)
-                }
-                resultsContainer.addView(note)
-            }
-
-            if (idx != results.lastIndex) {
-                val divider = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        (1 * density).toInt()
-                    ).also {
-                        it.topMargin = (16 * density).toInt()
-                        it.bottomMargin = (16 * density).toInt()
-                    }
-                    setBackgroundColor(Color.parseColor("#CCCCCC"))
-                }
-                resultsContainer.addView(divider)
-            }
         }
     }
 }
