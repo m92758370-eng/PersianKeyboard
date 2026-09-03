@@ -41,6 +41,11 @@
             android:exported="true"
             android:label="چیدمان دستی کلیدها" />
 
+        <activity
+            android:name=".OverlapFinderActivity"
+            android:exported="true"
+            android:label="الصاق‌گیر" />
+
         <service
             android:name=".MyInputMethodService"
             android:permission="android.permission.BIND_INPUT_METHOD"
