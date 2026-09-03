@@ -71,7 +71,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         isAntiAlias = true
     }
     private val enterAccentPaint = Paint().apply {
-        color = Color.parseColor("#5B8DEF")
+        color = Color.parseColor("#7BA7F5")
         isAntiAlias = true
     }
     private val highlightPaint = Paint().apply {
@@ -694,9 +694,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
         canvas.drawPath(rightPath, arrowIconPaint)
 
-        val dotR = rowHeight * 0.018f
-        val dotSpacing = rowHeight * 0.09f
-        for (i in -1..1) {
+        val dotR = rowHeight * 0.014f
+        val dotSpacing = rowHeight * 0.065f
+        for (i in -2..2) {
             canvas.drawCircle(cx, cy + i * dotSpacing, dotR, smileyDotPaint)
         }
     }
@@ -769,7 +769,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val eyeOffsetX = faceR * 0.42f
         val eyeOffsetY = faceR * 0.2f
         canvas.drawCircle(faceCx - eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
-        canvas.drawCircle(faceCx + eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
+        val winkPaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.3f * density }
+        val winkRect = RectF(
+            faceCx + eyeOffsetX - eyeR * 1.4f, faceCy - eyeOffsetY - eyeR * 1.1f,
+            faceCx + eyeOffsetX + eyeR * 1.4f, faceCy - eyeOffsetY + eyeR * 1.1f
+        )
+        canvas.drawArc(winkRect, 15f, 150f, false, winkPaint)
         val mouthRect = RectF(faceCx - faceR * 0.55f, faceCy - faceR * 0.25f, faceCx + faceR * 0.55f, faceCy + faceR * 0.55f)
         val mouthPaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.6f * density }
         canvas.drawArc(mouthRect, 20f, 140f, false, mouthPaint)
@@ -816,49 +821,85 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val size = rect.height() * 0.36f
-        val bigPaint = Paint(textPaint).apply { textSize = size; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
-        val smallPaint = Paint(textPaint).apply { textSize = size * 0.72f; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
-        val offsetX = size * 0.32f
-        val offsetY = size * 0.26f
+        val cardSize = rect.height() * 0.32f
+        val cardCorner = cardSize * 0.24f
+        val offset = cardSize * 0.3f
 
-        canvas.drawText(
-            "A",
-            cx - offsetX,
-            cy - offsetY - (bigPaint.descent() + bigPaint.ascent()) / 2,
-            bigPaint
-        )
-        canvas.drawText(
-            "ا",
-            cx + offsetX,
-            cy + offsetY - (smallPaint.descent() + smallPaint.ascent()) / 2,
-            smallPaint
-        )
-        val underlineY = cy + offsetY + size * 0.32f
-        val underlinePaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.8f * density }
-        canvas.drawLine(
-            cx + offsetX - size * 0.32f, underlineY,
-            cx + offsetX + size * 0.32f, underlineY,
-            underlinePaint
-        )
+        val cardStroke = Paint(smileyStrokePaint).apply { strokeWidth = 1.4f * density }
+        val eraseFill = Paint().apply { color = fallbackBgColor; style = Paint.Style.FILL; isAntiAlias = true }
+
+        val backCx = cx + offset
+        val backCy = cy - offset
+        val backRect = RectF(backCx - cardSize / 2, backCy - cardSize / 2, backCx + cardSize / 2, backCy + cardSize / 2)
+        canvas.drawRoundRect(backRect, cardCorner, cardCorner, cardStroke)
+
+        val letterPaintSmall = Paint(textPaint).apply { textSize = cardSize * 0.5f; textAlign = Paint.Align.CENTER }
+        canvas.drawText("ا", backCx, backCy - (letterPaintSmall.descent() + letterPaintSmall.ascent()) / 2, letterPaintSmall)
+        drawTinyStar(canvas, backCx + cardSize * 0.48f, backCy - cardSize * 0.5f, cardSize * 0.13f)
+
+        val frontCx = cx - offset
+        val frontCy = cy + offset
+        val frontRect = RectF(frontCx - cardSize / 2, frontCy - cardSize / 2, frontCx + cardSize / 2, frontCy + cardSize / 2)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, eraseFill)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, cardStroke)
+
+        val letterPaintBig = Paint(textPaint).apply { textSize = cardSize * 0.62f; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+        canvas.drawText("A", frontCx, frontCy - (letterPaintBig.descent() + letterPaintBig.ascent()) / 2, letterPaintBig)
+    }
+
+    private fun drawTinyStar(canvas: Canvas, cx: Float, cy: Float, r: Float) {
+        val path = Path()
+        for (i in 0 until 4) {
+            val angle = Math.toRadians((i * 90).toDouble())
+            val outerX = cx + (r * Math.cos(angle)).toFloat()
+            val outerY = cy + (r * Math.sin(angle)).toFloat()
+            if (i == 0) path.moveTo(outerX, outerY) else path.lineTo(outerX, outerY)
+            val midAngle = Math.toRadians((i * 90 + 45).toDouble())
+            val innerX = cx + (r * 0.4f * Math.cos(midAngle)).toFloat()
+            val innerY = cy + (r * 0.4f * Math.sin(midAngle)).toFloat()
+            path.lineTo(innerX, innerY)
+        }
+        path.close()
+        val starPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL }
+        canvas.drawPath(path, starPaint)
     }
 
     private fun drawGearIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val r = rect.height() * 0.24f
-        canvas.drawCircle(cx, cy, r * 0.45f, smileyStrokePaint)
-        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
-        val toothLen = r * 0.35f
-        for (i in 0 until 8) {
-            val angle = Math.toRadians((i * 45).toDouble())
-            val x1 = cx + (r * Math.cos(angle)).toFloat()
-            val y1 = cy + (r * Math.sin(angle)).toFloat()
-            val x2 = cx + ((r + toothLen) * Math.cos(angle)).toFloat()
-            val y2 = cy + ((r + toothLen) * Math.sin(angle)).toFloat()
-            canvas.drawLine(x1, y1, x2, y2, smileyStrokePaint)
+        val rOuter = rect.height() * 0.20f
+        val rBody = rOuter * 0.62f
+        val toothW = rOuter * 0.42f
+        val toothH = rOuter * 0.5f
+        val holeR = rOuter * 0.26f
+
+        val fillPaint = Paint().apply {
+            color = smileyDotPaint.color
+            isAntiAlias = true
+            style = Paint.Style.FILL
         }
+
+        canvas.drawCircle(cx, cy, rBody, fillPaint)
+
+        for (i in 0 until 6) {
+            canvas.save()
+            canvas.rotate(i * 60f, cx, cy)
+            val toothRect = RectF(
+                cx - toothW / 2,
+                cy - rBody - toothH * 0.72f,
+                cx + toothW / 2,
+                cy - rBody + toothH * 0.28f
+            )
+            canvas.drawRoundRect(toothRect, toothW * 0.4f, toothW * 0.4f, fillPaint)
+            canvas.restore()
+        }
+
+        val holePaint = Paint().apply {
+            color = fallbackBgColor
+            isAntiAlias = true
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(cx, cy, holeR, holePaint)
     }
 
     private fun drawClipboardIcon(canvas: Canvas, rect: RectF) {
@@ -869,7 +910,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val w = h * 0.78f
         val bodyRect = RectF(cx - w / 2, cy - h * 0.5f, cx + w / 2, cy + h * 0.55f)
         canvas.drawRoundRect(bodyRect, 4f * density, 4f * density, strokePaint)
-        val clipRect = RectF(cx - w * 0.22f, cy - h * 0.68f, cx + w * 0.22f, cy - h * 0.42f)
+        val clipRect = RectF(cx - w * 0.14f, cy - h * 0.68f, cx + w * 0.14f, cy - h * 0.46f)
         canvas.drawRoundRect(clipRect, 3f * density, 3f * density, strokePaint)
 
         val lineInset = w * 0.2f
@@ -900,18 +941,24 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private fun drawEnterIcon(canvas: Canvas, rect: RectF) {
         val enterIconPaint = Paint().apply {
-            color = Color.WHITE
+            color = Color.parseColor("#16305C")
             isAntiAlias = true
             style = Paint.Style.STROKE
-            strokeWidth = 2.0f * density
+            strokeWidth = 2.2f * density
             strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
         }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val w = rowHeight * 0.16f
-        val h = rowHeight * 0.12f
+        val w = rowHeight * 0.15f
+        val hookH = rowHeight * 0.1f
 
-        canvas.drawLine(cx - w, cy, cx + w, cy, enterIconPaint)
+        val shaftPath = Path().apply {
+            moveTo(cx - w * 0.35f, cy - hookH)
+            lineTo(cx - w * 0.35f, cy)
+            lineTo(cx + w, cy)
+        }
+        canvas.drawPath(shaftPath, enterIconPaint)
 
         val headSize = rowHeight * 0.09f
         val headPath = Path().apply {
