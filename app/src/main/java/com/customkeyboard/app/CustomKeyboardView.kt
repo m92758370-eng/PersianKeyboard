@@ -733,17 +733,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawStickerIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
+        smileyStrokePaint.strokeWidth = 1.7f * density
         smileyStrokePaint.strokeJoin = Paint.Join.ROUND
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val size = rect.height() * 0.38f
+        val size = rect.height() * 0.42f
         val half = size * 0.5f
         val left = cx - half
         val right = cx + half
         val top = cy - half
         val bottom = cy + half
-        val fold = size * 0.3f
+        val fold = size * 0.32f
 
         val path = Path().apply {
             moveTo(left, top)
@@ -762,16 +762,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
         canvas.drawPath(foldPath, smileyStrokePaint)
 
-        val faceR = size * 0.24f
-        val faceCx = cx - size * 0.06f
-        val faceCy = cy + size * 0.08f
-        val eyeR = faceR * 0.14f
+        val faceR = size * 0.34f
+        val faceCx = cx - size * 0.08f
+        val faceCy = cy + size * 0.05f
+        val eyeR = faceR * 0.16f
         val eyeOffsetX = faceR * 0.42f
         val eyeOffsetY = faceR * 0.2f
         canvas.drawCircle(faceCx - eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
         canvas.drawCircle(faceCx + eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
-        val mouthRect = RectF(faceCx - faceR * 0.5f, faceCy - faceR * 0.25f, faceCx + faceR * 0.5f, faceCy + faceR * 0.5f)
-        canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
+        val mouthRect = RectF(faceCx - faceR * 0.55f, faceCy - faceR * 0.25f, faceCx + faceR * 0.55f, faceCy + faceR * 0.55f)
+        val mouthPaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.6f * density }
+        canvas.drawArc(mouthRect, 20f, 140f, false, mouthPaint)
     }
 
     private fun drawAutoTypeIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.15f) {
@@ -815,11 +816,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val size = rect.height() * 0.32f
-        val bigPaint = Paint(textPaint).apply { textSize = size; textAlign = Paint.Align.CENTER }
-        val smallPaint = Paint(textPaint).apply { textSize = size * 0.6f; textAlign = Paint.Align.CENTER }
-        val offsetX = size * 0.34f
-        val offsetY = size * 0.30f
+        val size = rect.height() * 0.36f
+        val bigPaint = Paint(textPaint).apply { textSize = size; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+        val smallPaint = Paint(textPaint).apply { textSize = size * 0.72f; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+        val offsetX = size * 0.32f
+        val offsetY = size * 0.26f
 
         canvas.drawText(
             "A",
@@ -833,11 +834,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             cy + offsetY - (smallPaint.descent() + smallPaint.ascent()) / 2,
             smallPaint
         )
-        val underlineY = cy + offsetY + size * 0.22f
+        val underlineY = cy + offsetY + size * 0.32f
+        val underlinePaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.8f * density }
         canvas.drawLine(
-            cx + offsetX - size * 0.3f, underlineY,
-            cx + offsetX + size * 0.3f, underlineY,
-            smileyStrokePaint
+            cx + offsetX - size * 0.32f, underlineY,
+            cx + offsetX + size * 0.32f, underlineY,
+            underlinePaint
         )
     }
 
@@ -860,15 +862,26 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawClipboardIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
+        val strokePaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.6f * density }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val h = rect.height() * 0.34f
-        val w = h * 0.75f
+        val h = rect.height() * 0.4f
+        val w = h * 0.78f
         val bodyRect = RectF(cx - w / 2, cy - h * 0.5f, cx + w / 2, cy + h * 0.55f)
-        canvas.drawRoundRect(bodyRect, 4f * density, 4f * density, smileyStrokePaint)
+        canvas.drawRoundRect(bodyRect, 4f * density, 4f * density, strokePaint)
         val clipRect = RectF(cx - w * 0.22f, cy - h * 0.68f, cx + w * 0.22f, cy - h * 0.42f)
-        canvas.drawRoundRect(clipRect, 3f * density, 3f * density, smileyStrokePaint)
+        canvas.drawRoundRect(clipRect, 3f * density, 3f * density, strokePaint)
+
+        val lineInset = w * 0.2f
+        val lineStartX = cx - w / 2 + lineInset
+        val lineEndXFull = cx + w / 2 - lineInset
+        val lineEndXShort = cx + w / 2 - lineInset * 1.8f
+        val lineY1 = cy - h * 0.05f
+        val lineY2 = cy + h * 0.18f
+        val lineY3 = cy + h * 0.4f
+        canvas.drawLine(lineStartX, lineY1, lineEndXFull, lineY1, strokePaint)
+        canvas.drawLine(lineStartX, lineY2, lineEndXFull, lineY2, strokePaint)
+        canvas.drawLine(lineStartX, lineY3, lineEndXShort, lineY3, strokePaint)
     }
 
     private fun drawGridIcon(canvas: Canvas, rect: RectF) {
