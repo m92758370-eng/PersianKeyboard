@@ -788,13 +788,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawArc(eyeRectLeft, 180f, 180f, true, fillPaint)
         canvas.drawArc(eyeRectRight, 180f, 180f, true, fillPaint)
 
-        // لبخند: شکل هلالی توپر که به سمت پایین باریک و نوک‌تیز می‌شه
-        val mouthHalfW = size * 0.24f
-        val mouthTopY = top + size * 0.57f
-        val mouthBottomY = top + size * 0.68f
+        // لبخند: شکل هلالی توپر و پررنگ که به سمت پایین باریک و نوک‌تیز می‌شه
+        val mouthHalfW = size * 0.25f
+        val mouthTopY = top + size * 0.55f
+        val mouthBottomY = top + size * 0.72f
         val mouthPath = Path().apply {
             moveTo(cx - mouthHalfW, mouthTopY)
-            quadTo(cx, mouthTopY - size * 0.03f, cx + mouthHalfW, mouthTopY)
+            quadTo(cx, mouthTopY - size * 0.06f, cx + mouthHalfW, mouthTopY)
             quadTo(cx, mouthBottomY, cx - mouthHalfW, mouthTopY)
             close()
         }
@@ -935,15 +935,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val bodyTop = cy - size / 2f
         val bodyBottom = cy + size / 2f
         val bodyRect = RectF(cx - size / 2f, bodyTop, cx + size / 2f, bodyBottom)
-        canvas.drawRoundRect(bodyRect, 3.2f * density, 3.2f * density, strokePaint)
+        canvas.drawRect(bodyRect, strokePaint) // گوشه‌های تیز، بدون گرد شدن
 
-        // گیره‌ی وسط لبه‌ی بالا، با یه دایره‌ی کوچیک روش
-        val clipW = size * 0.27f
-        val clipH = size * 0.14f
-        val clipRect = RectF(cx - clipW / 2f, bodyTop - clipH * 0.9f, cx + clipW / 2f, bodyTop + clipH * 0.25f)
-        canvas.drawRoundRect(clipRect, 2.2f * density, 2.2f * density, strokePaint)
+        // یه دایره‌ی کوچیک وسط لبه‌ی بالا (به‌جای گیره‌ی مستطیلی)، با یه نقطه‌ی توخالی وسطش
+        val clipR = size * 0.135f
+        canvas.drawCircle(cx, bodyTop, clipR, strokePaint)
         val knobPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
-        canvas.drawCircle(cx, clipRect.top + clipH * 0.15f, clipH * 0.14f, knobPaint)
+        canvas.drawCircle(cx, bodyTop + clipR * 0.35f, clipR * 0.24f, knobPaint)
 
         // سه خط داخلی؛ دوتای اول تمام‌عرض و هم‌تراز، سومی از سمت چپ کوتاه‌تره
         // و لبه‌ی راستش با اون دوتا یکیه (فقط از چپ نصفه شده)
