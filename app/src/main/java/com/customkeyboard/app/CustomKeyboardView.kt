@@ -157,11 +157,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         backgroundW = w
         backgroundH = h
 
-        if (PrefsHelper.isDarkMode(context)) {
-            backgroundBitmap = null
-            return
-        }
-
         val customUriString = PrefsHelper.getBackgroundImageUri(context)
         if (customUriString != null) {
             try {
@@ -175,6 +170,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 }
             } catch (e: Exception) {
             }
+        }
+
+        if (PrefsHelper.isDarkMode(context)) {
+            backgroundBitmap = null
+            return
         }
 
         val resId = resources.getIdentifier("keyboard_background", "drawable", context.packageName)
