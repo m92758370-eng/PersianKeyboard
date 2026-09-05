@@ -35,7 +35,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, ZWNJ, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID }
     private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS, EMOJI }
 
     private data class KeyRect(
@@ -197,9 +197,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private fun applyThemeColors() {
         if (PrefsHelper.isDarkMode(context)) {
-            keyPaint.color = Color.parseColor("#FF2C2C2E")
-            specialKeyPaint.color = Color.parseColor("#FF232324")
-            accentPaint.color = Color.parseColor("#FF3A3A3C")
+            keyPaint.color = Color.parseColor("#662C2C2E")
+            specialKeyPaint.color = Color.parseColor("#66232324")
+            accentPaint.color = Color.parseColor("#663A3A3C")
             textPaint.color = Color.WHITE
             labelPaint.color = Color.parseColor("#8E8E93")
             overlayPaint.color = Color.parseColor("#00000000")
@@ -363,8 +363,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val autoW = w * 0.14f
         val switchW = w * 0.14f
         val pauseW = w * 0.13f
+        val zwnjW = w * 0.09f
         val enterW = w * 0.16f
-        val spaceW = w - symbolsToggleW - autoW - switchW - pauseW - enterW
+        val spaceW = w - symbolsToggleW - autoW - switchW - pauseW - zwnjW - enterW
 
         var x = 0f
         keys.add(KeyRect("", RectF(x, bottomTop, x + symbolsToggleW, bottomBottom), KeyType.SYMBOLS_TOGGLE))
@@ -378,6 +379,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         x += spaceW
         keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
         x += pauseW
+        keys.add(KeyRect("", RectF(x, bottomTop, x + zwnjW, bottomBottom), KeyType.ZWNJ))
+        x += zwnjW
         keys.add(KeyRect("⏎", RectF(x, bottomTop, x + enterW, bottomBottom), KeyType.ENTER))
     }
 
@@ -453,6 +456,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 }
             } else if (key.type == KeyType.ENTER) {
                 drawEnterIcon(canvas, key.rect)
+            } else if (key.type == KeyType.ZWNJ) {
+                drawZwnjIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -660,6 +665,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.SYMBOL -> {
                 flashKey(key.label)
                 listener?.onCommitText(key.label)
+            }
+            KeyType.ZWNJ -> {
+                flashKey("\u200C")
+                listener?.onCommitText("\u200C")
             }
             else -> {}
         }
@@ -925,11 +934,21 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawLine(lineStartX, lineY3, lineEndXShort, lineY3, strokePaint)
     }
 
+    private fun drawZwnjIcon(canvas: Canvas, rect: RectF) {
+        smileyStrokePaint.strokeWidth = 1.5f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY() - rect.height() * 0.08f
+        val r = rect.height() * 0.16f
+        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
+        val dotR = r * 0.28f
+        canvas.drawCircle(cx + r * 0.75f, cy + r * 0.85f, dotR, smileyDotPaint)
+    }
+
     private fun drawGridIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val s = rect.height() * 0.11f
-        val gap = rect.height() * 0.06f
+        val s = rect.height() * 0.16f
+        val gap = rect.height() * 0.07f
         for (row in -1..0) {
             for (col in -1..0) {
                 val left = cx + col * (s + gap) + gap / 2
