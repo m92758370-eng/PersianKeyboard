@@ -842,30 +842,37 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val cardSize = rect.height() * 0.32f
-        val cardCorner = cardSize * 0.24f
-        val offset = cardSize * 0.3f
+        val cardSize = rect.height() * 0.34f
+        val cardCorner = cardSize * 0.22f
+        val overlap = cardSize * 0.32f // هم‌پوشانی افقی بین دو کارت
 
-        val cardStroke = Paint(smileyStrokePaint).apply { strokeWidth = 1.4f * density }
-        val eraseFill = Paint().apply { color = fallbackBgColor; style = Paint.Style.FILL; isAntiAlias = true }
+        val fillPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+        val seamPaint = Paint().apply {
+            color = fallbackBgColor
+            style = Paint.Style.STROKE
+            strokeWidth = 1.6f * density
+            isAntiAlias = true
+        }
+        val darkTextPaint = Paint().apply {
+            color = fallbackBgColor
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
 
-        val backCx = cx + offset
-        val backCy = cy - offset
-        val backRect = RectF(backCx - cardSize / 2, backCy - cardSize / 2, backCx + cardSize / 2, backCy + cardSize / 2)
-        canvas.drawRoundRect(backRect, cardCorner, cardCorner, cardStroke)
+        // کارت پشتی (سمت راست) با یه کاراکتر شبیه حروف ترجمه (سبک CJK)
+        val backCx = cx + overlap
+        val backRect = RectF(backCx - cardSize / 2, cy - cardSize / 2, backCx + cardSize / 2, cy + cardSize / 2)
+        canvas.drawRoundRect(backRect, cardCorner, cardCorner, fillPaint)
+        val cjkPaint = Paint(darkTextPaint).apply { textSize = cardSize * 0.56f }
+        canvas.drawText("字", backCx, cy - (cjkPaint.descent() + cjkPaint.ascent()) / 2, cjkPaint)
 
-        val letterPaintSmall = Paint(textPaint).apply { textSize = cardSize * 0.5f; textAlign = Paint.Align.CENTER }
-        canvas.drawText("ا", backCx, backCy - (letterPaintSmall.descent() + letterPaintSmall.ascent()) / 2, letterPaintSmall)
-        drawTinyStar(canvas, backCx + cardSize * 0.48f, backCy - cardSize * 0.5f, cardSize * 0.13f)
-
-        val frontCx = cx - offset
-        val frontCy = cy + offset
-        val frontRect = RectF(frontCx - cardSize / 2, frontCy - cardSize / 2, frontCx + cardSize / 2, frontCy + cardSize / 2)
-        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, eraseFill)
-        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, cardStroke)
-
-        val letterPaintBig = Paint(textPaint).apply { textSize = cardSize * 0.62f; textAlign = Paint.Align.CENTER; isFakeBoldText = true }
-        canvas.drawText("A", frontCx, frontCy - (letterPaintBig.descent() + letterPaintBig.ascent()) / 2, letterPaintBig)
+        // کارت جلویی (سمت چپ) با حرف G توپر، با یه خط باریک دور خودش تا از کارت پشتی جدا دیده بشه
+        val frontCx = cx - overlap
+        val frontRect = RectF(frontCx - cardSize / 2, cy - cardSize / 2, frontCx + cardSize / 2, cy + cardSize / 2)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, fillPaint)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, seamPaint)
+        val gPaint = Paint(darkTextPaint).apply { textSize = cardSize * 0.62f; isFakeBoldText = true }
+        canvas.drawText("G", frontCx, cy - (gPaint.descent() + gPaint.ascent()) / 2, gPaint)
     }
 
     private fun drawTinyStar(canvas: Canvas, cx: Float, cy: Float, r: Float) {
