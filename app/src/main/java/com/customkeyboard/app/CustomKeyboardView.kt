@@ -918,36 +918,36 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val h = rect.height() * 0.42f
-        val w = h * 0.74f
+        val size = rect.height() * 0.42f // بدنه دقیقاً مربع (عرض = ارتفاع)
 
-        val bodyTop = cy - h * 0.42f
-        val bodyBottom = cy + h * 0.58f
-        val bodyRect = RectF(cx - w / 2, bodyTop, cx + w / 2, bodyBottom)
-        canvas.drawRoundRect(bodyRect, 3.5f * density, 3.5f * density, strokePaint)
+        val bodyTop = cy - size / 2f
+        val bodyBottom = cy + size / 2f
+        val bodyRect = RectF(cx - size / 2f, bodyTop, cx + size / 2f, bodyBottom)
+        canvas.drawRoundRect(bodyRect, 3.2f * density, 3.2f * density, strokePaint)
 
-        // گیره‌ی وسط لبه‌ی بالا، با یه دایره‌ی کوچیک وسطش
-        val clipW = w * 0.36f
-        val clipH = h * 0.16f
-        val clipRect = RectF(cx - clipW / 2, bodyTop - clipH * 0.75f, cx + clipW / 2, bodyTop + clipH * 0.35f)
-        canvas.drawRoundRect(clipRect, 2.5f * density, 2.5f * density, strokePaint)
+        // گیره‌ی وسط لبه‌ی بالا، با یه دایره‌ی کوچیک روش
+        val clipW = size * 0.27f
+        val clipH = size * 0.14f
+        val clipRect = RectF(cx - clipW / 2f, bodyTop - clipH * 0.9f, cx + clipW / 2f, bodyTop + clipH * 0.25f)
+        canvas.drawRoundRect(clipRect, 2.2f * density, 2.2f * density, strokePaint)
         val knobPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
-        canvas.drawCircle(cx, clipRect.centerY(), clipH * 0.16f, knobPaint)
+        canvas.drawCircle(cx, clipRect.top + clipH * 0.15f, clipH * 0.14f, knobPaint)
 
-        // سه خط داخلی: دوتای اول تمام‌عرض، سومی کوتاه‌تر
+        // سه خط داخلی؛ دوتای اول تمام‌عرض و هم‌تراز، سومی از سمت چپ کوتاه‌تره
+        // و لبه‌ی راستش با اون دوتا یکیه (فقط از چپ نصفه شده)
         val linePaint = Paint(smileyStrokePaint).apply {
             strokeWidth = 1.6f * density
             strokeCap = Paint.Cap.ROUND
         }
-        val innerLeft = cx - w * 0.32f
-        val innerRightFull = cx + w * 0.32f
-        val innerRightShort = cx + w * 0.06f
-        val lineAreaTop = bodyTop + h * 0.36f
-        val lineAreaBottom = bodyBottom - h * 0.14f
-        val lineGap = (lineAreaBottom - lineAreaTop) / 2f
-        canvas.drawLine(innerLeft, lineAreaTop, innerRightFull, lineAreaTop, linePaint)
-        canvas.drawLine(innerLeft, lineAreaTop + lineGap, innerRightFull, lineAreaTop + lineGap, linePaint)
-        canvas.drawLine(innerLeft, lineAreaTop + lineGap * 2, innerRightShort, lineAreaTop + lineGap * 2, linePaint)
+        val innerRight = cx + size * 0.27f
+        val innerLeftFull = cx - size * 0.27f
+        val innerLeftShort = cx - size * 0.09f
+        val lineY1 = bodyTop + size * 0.26f
+        val lineY2 = bodyTop + size * 0.49f
+        val lineY3 = bodyTop + size * 0.73f
+        canvas.drawLine(innerLeftFull, lineY1, innerRight, lineY1, linePaint)
+        canvas.drawLine(innerLeftFull, lineY2, innerRight, lineY2, linePaint)
+        canvas.drawLine(innerLeftShort, lineY3, innerRight, lineY3, linePaint)
     }
 
     private fun drawZwnjIcon(canvas: Canvas, rect: RectF) {
