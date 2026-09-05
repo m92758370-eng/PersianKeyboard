@@ -742,51 +742,63 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawStickerIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.7f * density
-        smileyStrokePaint.strokeJoin = Paint.Join.ROUND
+        val strokePaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.7f * density
+            style = Paint.Style.STROKE
+            strokeJoin = Paint.Join.ROUND
+        }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val size = rect.height() * 0.42f
+        val size = rect.height() * 0.42f // بدنه دقیقاً مربع
         val half = size * 0.5f
         val left = cx - half
         val right = cx + half
         val top = cy - half
         val bottom = cy + half
-        val fold = size * 0.32f
+        val fold = size * 0.27f // اندازه‌ی گوشه‌ی تاشده
 
+        // بدنه‌ی مربعی با گوشه‌ی تا‌شده (سر تیز) پایین-راست
         val path = Path().apply {
             moveTo(left, top)
-            lineTo(right - fold, top)
-            lineTo(right, top + fold)
-            lineTo(right, bottom)
+            lineTo(right, top)
+            lineTo(right, bottom - fold)
+            lineTo(right - fold, bottom)
             lineTo(left, bottom)
             close()
         }
-        canvas.drawPath(path, smileyStrokePaint)
+        canvas.drawPath(path, strokePaint)
 
+        // خط تای گوشه
         val foldPath = Path().apply {
-            moveTo(right - fold, top)
-            lineTo(right - fold, top + fold)
-            lineTo(right, top + fold)
+            moveTo(right - fold, bottom - fold)
+            lineTo(right, bottom - fold)
+            lineTo(right - fold, bottom)
+            close()
         }
-        canvas.drawPath(foldPath, smileyStrokePaint)
+        canvas.drawPath(foldPath, strokePaint)
 
-        val faceR = size * 0.34f
-        val faceCx = cx - size * 0.08f
-        val faceCy = cy + size * 0.05f
-        val eyeR = faceR * 0.16f
-        val eyeOffsetX = faceR * 0.42f
-        val eyeOffsetY = faceR * 0.2f
-        canvas.drawCircle(faceCx - eyeOffsetX, faceCy - eyeOffsetY, eyeR, smileyDotPaint)
-        val winkPaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.3f * density }
-        val winkRect = RectF(
-            faceCx + eyeOffsetX - eyeR * 1.4f, faceCy - eyeOffsetY - eyeR * 1.1f,
-            faceCx + eyeOffsetX + eyeR * 1.4f, faceCy - eyeOffsetY + eyeR * 1.1f
-        )
-        canvas.drawArc(winkRect, 15f, 150f, false, winkPaint)
-        val mouthRect = RectF(faceCx - faceR * 0.55f, faceCy - faceR * 0.25f, faceCx + faceR * 0.55f, faceCy + faceR * 0.55f)
-        val mouthPaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.6f * density }
-        canvas.drawArc(mouthRect, 20f, 140f, false, mouthPaint)
+        val fillPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+
+        // دو چشم قوسی‌شکل و هم‌اندازه (مثل چشم‌های خندون بسته)
+        val eyeR = size * 0.11f
+        val eyeOffsetX = size * 0.19f
+        val eyeY = top + size * 0.30f
+        val eyeRectLeft = RectF(cx - eyeOffsetX - eyeR, eyeY - eyeR, cx - eyeOffsetX + eyeR, eyeY + eyeR)
+        val eyeRectRight = RectF(cx + eyeOffsetX - eyeR, eyeY - eyeR, cx + eyeOffsetX + eyeR, eyeY + eyeR)
+        canvas.drawArc(eyeRectLeft, 180f, 180f, true, fillPaint)
+        canvas.drawArc(eyeRectRight, 180f, 180f, true, fillPaint)
+
+        // لبخند: شکل هلالی توپر که به سمت پایین باریک و نوک‌تیز می‌شه
+        val mouthHalfW = size * 0.24f
+        val mouthTopY = top + size * 0.57f
+        val mouthBottomY = top + size * 0.68f
+        val mouthPath = Path().apply {
+            moveTo(cx - mouthHalfW, mouthTopY)
+            quadTo(cx, mouthTopY - size * 0.03f, cx + mouthHalfW, mouthTopY)
+            quadTo(cx, mouthBottomY, cx - mouthHalfW, mouthTopY)
+            close()
+        }
+        canvas.drawPath(mouthPath, fillPaint)
     }
 
     private fun drawAutoTypeIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.15f) {
