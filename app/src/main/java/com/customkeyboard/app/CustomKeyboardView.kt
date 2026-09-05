@@ -888,11 +888,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawGearIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val rOuter = rect.height() * 0.20f
-        val rBody = rOuter * 0.62f
-        val toothW = rOuter * 0.42f
+        val rOuter = rect.height() * 0.26f
+        val rBody = rOuter * 0.66f
+        val toothW = rOuter * 0.46f
         val toothH = rOuter * 0.5f
-        val holeR = rOuter * 0.26f
+        val holeR = rOuter * 0.22f
 
         val fillPaint = Paint().apply {
             color = smileyDotPaint.color
@@ -937,11 +937,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val bodyRect = RectF(cx - size / 2f, bodyTop, cx + size / 2f, bodyBottom)
         canvas.drawRect(bodyRect, strokePaint) // گوشه‌های تیز، بدون گرد شدن
 
-        // یه دایره‌ی کوچیک وسط لبه‌ی بالا (به‌جای گیره‌ی مستطیلی)، با یه نقطه‌ی توخالی وسطش
-        val clipR = size * 0.135f
-        canvas.drawCircle(cx, bodyTop, clipR, strokePaint)
-        val knobPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
-        canvas.drawCircle(cx, bodyTop + clipR * 0.35f, clipR * 0.24f, knobPaint)
+        // یه نیم‌دایره‌ی توخالی (فقط خط دور) وسط لبه‌ی بالا، با یه نقطه‌ی توپر کوچیک وسطش
+        val clipR = size * 0.15f
+        val clipRect = RectF(cx - clipR, bodyTop - clipR, cx + clipR, bodyTop + clipR)
+        canvas.drawArc(clipRect, 180f, 180f, false, strokePaint)
+        val dotPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+        canvas.drawCircle(cx, bodyTop - clipR * 0.3f, clipR * 0.2f, dotPaint)
 
         // سه خط داخلی؛ دوتای اول تمام‌عرض و هم‌تراز، سومی از سمت چپ کوتاه‌تره
         // و لبه‌ی راستش با اون دوتا یکیه (فقط از چپ نصفه شده)
