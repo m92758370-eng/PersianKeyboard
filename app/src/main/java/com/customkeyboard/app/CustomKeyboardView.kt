@@ -912,36 +912,75 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawClipboardIcon(canvas: Canvas, rect: RectF) {
-        val strokePaint = Paint(smileyStrokePaint).apply { strokeWidth = 1.6f * density }
+        val strokePaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.6f * density
+            style = Paint.Style.STROKE
+        }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val h = rect.height() * 0.4f
-        val w = h * 0.78f
-        val bodyRect = RectF(cx - w / 2, cy - h * 0.5f, cx + w / 2, cy + h * 0.55f)
-        canvas.drawRoundRect(bodyRect, 4f * density, 4f * density, strokePaint)
-        val clipRect = RectF(cx - w * 0.14f, cy - h * 0.68f, cx + w * 0.14f, cy - h * 0.46f)
-        canvas.drawRoundRect(clipRect, 3f * density, 3f * density, strokePaint)
+        val h = rect.height() * 0.42f
+        val w = h * 0.74f
 
-        val lineInset = w * 0.2f
-        val lineStartX = cx - w / 2 + lineInset
-        val lineEndXFull = cx + w / 2 - lineInset
-        val lineEndXShort = cx + w / 2 - lineInset * 1.8f
-        val lineY1 = cy - h * 0.05f
-        val lineY2 = cy + h * 0.18f
-        val lineY3 = cy + h * 0.4f
-        canvas.drawLine(lineStartX, lineY1, lineEndXFull, lineY1, strokePaint)
-        canvas.drawLine(lineStartX, lineY2, lineEndXFull, lineY2, strokePaint)
-        canvas.drawLine(lineStartX, lineY3, lineEndXShort, lineY3, strokePaint)
+        val bodyTop = cy - h * 0.42f
+        val bodyBottom = cy + h * 0.58f
+        val bodyRect = RectF(cx - w / 2, bodyTop, cx + w / 2, bodyBottom)
+        canvas.drawRoundRect(bodyRect, 3.5f * density, 3.5f * density, strokePaint)
+
+        // گیره‌ی وسط لبه‌ی بالا، با یه دایره‌ی کوچیک وسطش
+        val clipW = w * 0.36f
+        val clipH = h * 0.16f
+        val clipRect = RectF(cx - clipW / 2, bodyTop - clipH * 0.75f, cx + clipW / 2, bodyTop + clipH * 0.35f)
+        canvas.drawRoundRect(clipRect, 2.5f * density, 2.5f * density, strokePaint)
+        val knobPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+        canvas.drawCircle(cx, clipRect.centerY(), clipH * 0.16f, knobPaint)
+
+        // سه خط داخلی: دوتای اول تمام‌عرض، سومی کوتاه‌تر
+        val linePaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.6f * density
+            strokeCap = Paint.Cap.ROUND
+        }
+        val innerLeft = cx - w * 0.32f
+        val innerRightFull = cx + w * 0.32f
+        val innerRightShort = cx + w * 0.06f
+        val lineAreaTop = bodyTop + h * 0.36f
+        val lineAreaBottom = bodyBottom - h * 0.14f
+        val lineGap = (lineAreaBottom - lineAreaTop) / 2f
+        canvas.drawLine(innerLeft, lineAreaTop, innerRightFull, lineAreaTop, linePaint)
+        canvas.drawLine(innerLeft, lineAreaTop + lineGap, innerRightFull, lineAreaTop + lineGap, linePaint)
+        canvas.drawLine(innerLeft, lineAreaTop + lineGap * 2, innerRightShort, lineAreaTop + lineGap * 2, linePaint)
     }
 
     private fun drawZwnjIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.5f * density
         val cx = rect.centerX()
-        val cy = rect.centerY() - rect.height() * 0.08f
-        val r = rect.height() * 0.16f
-        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
-        val dotR = r * 0.28f
-        canvas.drawCircle(cx + r * 0.75f, cy + r * 0.85f, dotR, smileyDotPaint)
+        val cy = rect.centerY() - rect.height() * 0.14f
+        val r = rect.height() * 0.15f
+
+        val dotPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+
+        // دایره‌ی نقطه‌چین (شبیه یه حلقه‌ی نقطه‌نقطه)
+        val ringDotRadius = r * 0.16f
+        val ringDotCount = 10
+        for (i in 0 until ringDotCount) {
+            val angle = 2.0 * Math.PI * i / ringDotCount
+            val dx = cx + (r * Math.cos(angle)).toFloat()
+            val dy = cy + (r * Math.sin(angle)).toFloat()
+            canvas.drawCircle(dx, dy, ringDotRadius, dotPaint)
+        }
+
+        // دو تا خط کوچیک بالا-چپ دایره (نشونه‌ی حرکت)
+        val tickPaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.3f * density
+            strokeCap = Paint.Cap.ROUND
+        }
+        val tickBaseX = cx - r * 1.3f
+        val tickBaseY = cy - r * 0.95f
+        val tickLen = r * 0.55f
+        canvas.drawLine(tickBaseX, tickBaseY, tickBaseX + tickLen, tickBaseY - tickLen * 0.4f, tickPaint)
+        canvas.drawLine(tickBaseX - tickLen * 0.25f, tickBaseY + tickLen * 0.45f, tickBaseX + tickLen * 0.5f, tickBaseY - tickLen * 0.05f, tickPaint)
+
+        // نقطه‌ی جدا زیر دایره
+        val bigDotRadius = r * 0.34f
+        canvas.drawCircle(cx, cy + r * 2.3f, bigDotRadius, dotPaint)
     }
 
     private fun drawGridIcon(canvas: Canvas, rect: RectF) {
