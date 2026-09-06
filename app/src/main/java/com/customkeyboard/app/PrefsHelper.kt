@@ -33,6 +33,7 @@ object PrefsHelper {
     private const val DEFAULT_SPACE_LABEL = "کینگ آنتونی"
     private const val KEY_DARK_MODE = "dark_mode"
     private const val KEY_CUSTOM_PERSIAN_ORDER = "custom_persian_key_order"
+    private const val KEY_OVERLAP_PARTS = "overlap_finder_parts"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -205,6 +206,16 @@ object PrefsHelper {
     fun getParagraphs(context: Context): List<String> {
         val raw = prefs(context).getString(KEY_PARAGRAPHS, "") ?: ""
         return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR).filter { it.isNotEmpty() }
+    }
+
+    // پارت‌های ذخیره‌شده‌ی «الصاق‌گیر» — ترتیب لیست یعنی ترتیب نمایش (جدیدترین اول)
+    fun getOverlapParts(context: Context): List<String> {
+        val raw = prefs(context).getString(KEY_OVERLAP_PARTS, "") ?: ""
+        return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR)
+    }
+
+    fun saveOverlapParts(context: Context, parts: List<String>) {
+        prefs(context).edit().putString(KEY_OVERLAP_PARTS, parts.joinToString(SEPARATOR)).apply()
     }
 
     fun addParagraph(context: Context, text: String) {
