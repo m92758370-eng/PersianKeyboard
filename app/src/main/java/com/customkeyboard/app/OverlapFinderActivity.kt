@@ -53,11 +53,20 @@ class OverlapFinderActivity : AppCompatActivity() {
         btnFindOverlap = findViewById(R.id.btnFindOverlap)
         progressBar = findViewById(R.id.progressBarOverlap)
 
-        addPartRow()
-        addPartRow()
+        val saved = PrefsHelper.getOverlapParts(this)
+        if (saved.isEmpty()) {
+            addPartRow(atTop = false)
+            addPartRow(atTop = false)
+        } else {
+            // ترتیب ذخیره‌شده از قبل «جدیدترین اول» هست، پس همون ترتیب رو پشت‌سرهم می‌سازیم
+            for (text in saved) {
+                addPartRow(initialText = text, atTop = false)
+            }
+        }
 
         findViewById<Button>(R.id.btnAddPart).setOnClickListener {
-            addPartRow()
+            addPartRow(atTop = true)
+            persistParts()
         }
 
         btnFindOverlap.setOnClickListener {
@@ -65,7 +74,16 @@ class OverlapFinderActivity : AppCompatActivity() {
         }
     }
 
-    private fun addPartRow(initialText: String = "") {
+    override fun onPause() {
+        super.onPause()
+        persistParts()
+    }
+
+    private fun persistParts() {
+        PrefsHelper.saveOverlapParts(this, partRows.map { it.editText.text.toString() })
+    }
+
+    private fun addPartRow(initialText: String = "", atTop: Boolean = false) {
         val density = resources.displayMetrics.density
 
         val rowContainer = LinearLayout(this).apply {
@@ -93,6 +111,7 @@ class OverlapFinderActivity : AppCompatActivity() {
                 partsContainer.removeView(rowContainer)
                 partRows.removeAll { it.container == rowContainer }
                 relabelRows()
+                persistParts() // فقط با زدن همین دکمه پاک می‌شه، نه با خروج از صفحه
             }
         }
 
@@ -108,9 +127,14 @@ class OverlapFinderActivity : AppCompatActivity() {
 
         rowContainer.addView(headerRow)
         rowContainer.addView(editText)
-        partsContainer.addView(rowContainer)
 
-        partRows.add(PartRow(rowContainer, label, editText))
+        if (atTop && partsContainer.childCount > 0) {
+            partsContainer.addView(rowContainer, 0)
+            partRows.add(0, PartRow(rowContainer, label, editText))
+        } else {
+            partsContainer.addView(rowContainer)
+            partRows.add(PartRow(rowContainer, label, editText))
+        }
         relabelRows()
     }
 
