@@ -37,6 +37,8 @@ class OverlapFinderActivity : AppCompatActivity() {
     private lateinit var edtMinLength: EditText
     private lateinit var btnFindOverlap: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var scrollRoot: android.widget.ScrollView
+    private lateinit var resultsHeading: TextView
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -52,6 +54,8 @@ class OverlapFinderActivity : AppCompatActivity() {
         edtMinLength = findViewById(R.id.edtMinLength)
         btnFindOverlap = findViewById(R.id.btnFindOverlap)
         progressBar = findViewById(R.id.progressBarOverlap)
+        scrollRoot = findViewById(R.id.scrollRoot)
+        resultsHeading = findViewById(R.id.resultsHeading)
 
         val saved = PrefsHelper.getOverlapParts(this)
         if (saved.isEmpty()) {
@@ -162,6 +166,7 @@ class OverlapFinderActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 btnFindOverlap.isEnabled = true
                 showResults(phrases)
+                scrollRoot.post { scrollRoot.smoothScrollTo(0, resultsHeading.top) }
             }
         }
     }
