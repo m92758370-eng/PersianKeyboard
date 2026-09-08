@@ -238,6 +238,30 @@ class WordShuffleActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showEditWordListDialog(name: String, container: LinearLayout) {
+        val words = PrefsHelper.getWordList(this, name)
+        val edt = EditText(this).apply {
+            setText(words.joinToString("\n"))
+            minLines = 8
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            hint = "هر کلمه تو یه خط..."
+        }
+        AlertDialog.Builder(this)
+            .setTitle("ویرایش لیست \"$name\"")
+            .setView(edt)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val newWords = edt.text.toString()
+                    .split("\n")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                PrefsHelper.saveWordList(this, name, newWords)
+                refreshSavedListsUI(container)
+                Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("انصراف", null)
+            .show()
+    }
+
     private fun refreshSavedListsUI(container: LinearLayout) {
         container.removeAllViews()
         val names = PrefsHelper.getWordListNames(this)
@@ -261,6 +285,13 @@ class WordShuffleActivity : AppCompatActivity() {
                     showAddWordToListDialog(name, container)
                 }
             }
+            val editBtn = Button(this).apply {
+                text = "ویرایش"
+                textSize = 12f
+                setOnClickListener {
+                    showEditWordListDialog(name, container)
+                }
+            }
             val deleteBtn = Button(this).apply {
                 text = "حذف"
                 textSize = 12f
@@ -272,6 +303,7 @@ class WordShuffleActivity : AppCompatActivity() {
             row.addView(checkBox)
             row.addView(label)
             row.addView(addWordBtn)
+            row.addView(editBtn)
             row.addView(deleteBtn)
             container.addView(row)
         }
