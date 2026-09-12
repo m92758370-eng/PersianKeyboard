@@ -39,6 +39,7 @@ class OverlapFinderActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var scrollRoot: android.widget.ScrollView
     private lateinit var resultsHeading: TextView
+    private lateinit var scrollHandle: View
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -56,6 +57,8 @@ class OverlapFinderActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBarOverlap)
         scrollRoot = findViewById(R.id.scrollRoot)
         resultsHeading = findViewById(R.id.resultsHeading)
+        scrollHandle = findViewById(R.id.scrollHandle)
+        setupScrollHandle()
 
         val saved = PrefsHelper.getOverlapParts(this)
         if (saved.isEmpty()) {
@@ -85,6 +88,49 @@ class OverlapFinderActivity : AppCompatActivity() {
 
     private fun persistParts() {
         PrefsHelper.saveOverlapParts(this, partRows.map { it.editText.text.toString() })
+    }
+
+    // دستگیره‌ی کناری که با کشیدنش کل صفحه بالا/پایین اسکرول می‌شه
+    private fun setupScrollHandle() {
+        val content = scrollRoot.getChildAt(0)
+        var trackHeight = 0f
+        var dragStartRawY = 0f
+        var dragStartHandleY = 0f
+
+        fun updateHandleFromScroll() {
+            val maxScroll = (content.height - scrollRoot.height).coerceAtLeast(1)
+            val fraction = scrollRoot.scrollY.toFloat() / maxScroll.toFloat()
+            scrollHandle.translationY = fraction.coerceIn(0f, 1f) * trackHeight
+        }
+
+        scrollRoot.viewTreeObserver.addOnGlobalLayoutListener {
+            trackHeight = (scrollRoot.height - scrollHandle.height).toFloat()
+            updateHandleFromScroll()
+        }
+
+        scrollRoot.setOnScrollChangeListener { _, _, _, _, _ ->
+            if (trackHeight > 0f) updateHandleFromScroll()
+        }
+
+        scrollHandle.setOnTouchListener { v, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    dragStartRawY = event.rawY
+                    dragStartHandleY = v.translationY
+                    true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val delta = event.rawY - dragStartRawY
+                    val newHandleY = (dragStartHandleY + delta).coerceIn(0f, trackHeight)
+                    v.translationY = newHandleY
+                    val maxScroll = (content.height - scrollRoot.height).coerceAtLeast(1)
+                    val fraction = if (trackHeight > 0f) newHandleY / trackHeight else 0f
+                    scrollRoot.scrollTo(0, (fraction * maxScroll).toInt())
+                    true
+                }
+                else -> true
+            }
+        }
     }
 
     private fun addPartRow(initialText: String = "", atTop: Boolean = false) {
@@ -166,7 +212,7 @@ class OverlapFinderActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 btnFindOverlap.isEnabled = true
                 showResults(phrases)
-                scrollRoot.post { scrollRoot.smoothScrollTo(0, resultsHeading.top) }
+                scrollRoot.post { scrollRoot.fullScroll(View.FOCUS_DOWN) }
             }
         }
     }
