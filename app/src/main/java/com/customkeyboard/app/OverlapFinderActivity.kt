@@ -51,14 +51,22 @@ class OverlapFinderActivity : AppCompatActivity() {
     }
 
     private fun loadProjects(): MutableList<OverlapProject> {
-        val arr = JSONArray(PrefsHelper.getOverlapProjectsJson(this))
         val list = mutableListOf<OverlapProject>()
+        val arr = try {
+            JSONArray(PrefsHelper.getOverlapProjectsJson(this))
+        } catch (e: Exception) {
+            JSONArray()
+        }
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            val partsArr = obj.getJSONArray("parts")
-            val parts = mutableListOf<String>()
-            for (j in 0 until partsArr.length()) parts.add(partsArr.getString(j))
-            list.add(OverlapProject(obj.getLong("id"), obj.getString("name"), parts))
+            try {
+                val obj = arr.getJSONObject(i)
+                val partsArr = obj.getJSONArray("parts")
+                val parts = mutableListOf<String>()
+                for (j in 0 until partsArr.length()) parts.add(partsArr.getString(j))
+                list.add(OverlapProject(obj.getLong("id"), obj.getString("name"), parts))
+            } catch (e: Exception) {
+                // این آیتم خراب بود، ردش می‌کنیم و بقیه رو نگه می‌داریم
+            }
         }
         return list
     }
