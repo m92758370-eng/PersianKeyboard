@@ -93,7 +93,11 @@ class OverlapProjectActivity : AppCompatActivity() {
 
     // ---------- ذخیره‌سازی پروژه ----------
 
-    private fun loadAllProjects(): JSONArray = JSONArray(PrefsHelper.getOverlapProjectsJson(this))
+    private fun loadAllProjects(): JSONArray = try {
+        JSONArray(PrefsHelper.getOverlapProjectsJson(this))
+    } catch (e: Exception) {
+        JSONArray()
+    }
 
     private fun saveAllProjects(arr: JSONArray) {
         PrefsHelper.saveOverlapProjectsJson(this, arr.toString())
