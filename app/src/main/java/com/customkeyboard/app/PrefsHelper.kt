@@ -208,14 +208,13 @@ object PrefsHelper {
         return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR).filter { it.isNotEmpty() }
     }
 
-    // پارت‌های ذخیره‌شده‌ی «الصاق‌گیر» — ترتیب لیست یعنی ترتیب نمایش (جدیدترین اول)
-    fun getOverlapParts(context: Context): List<String> {
-        val raw = prefs(context).getString(KEY_OVERLAP_PARTS, "") ?: ""
-        return if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR)
+    // پارت‌های ذخیره‌شده‌ی «الصاق‌گیر» — به‌صورت پروژه‌های جدا (JSON)
+    fun getOverlapProjectsJson(context: Context): String {
+        return prefs(context).getString(KEY_OVERLAP_PARTS, "[]") ?: "[]"
     }
 
-    fun saveOverlapParts(context: Context, parts: List<String>) {
-        prefs(context).edit().putString(KEY_OVERLAP_PARTS, parts.joinToString(SEPARATOR)).apply()
+    fun saveOverlapProjectsJson(context: Context, json: String) {
+        prefs(context).edit().putString(KEY_OVERLAP_PARTS, json).apply()
     }
 
     fun addParagraph(context: Context, text: String) {
