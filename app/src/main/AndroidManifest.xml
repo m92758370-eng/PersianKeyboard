@@ -1,42 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="الصاق‌گیر"
-        android:textStyle="bold"
-        android:textSize="20sp"
-        android:paddingBottom="4dp" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#666666"
-        android:paddingBottom="12dp"
-        android:text="هر پروژه یه مجموعه پارت جداست. رو یه پروژه بزن تا پارت‌های جدید بهش اضافه کنی یا الصاق‌هاشو پیدا کنی." />
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.Light">
 
-    <Button
-        android:id="@+id/btnNewProject"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:text="+ پروژه‌ی جدید" />
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        <activity
+            android:name=".WordShuffleActivity"
+            android:exported="true"
+            android:label="ترکیب کلمات" />
 
-        <LinearLayout
-            android:id="@+id/projectsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-    </ScrollView>
+        <activity
+            android:name=".TextReplaceActivity"
+            android:exported="true"
+            android:label="حذف و جایگزینی کلمات" />
 
-</LinearLayout>
+        <activity
+            android:name=".AiWriterActivity"
+            android:exported="true"
+            android:label="دستیار داستان‌نویسی" />
+
+        <activity
+            android:name=".KeyLayoutActivity"
+            android:exported="true"
+            android:label="چیدمان دستی کلیدها" />
+
+        <activity
+            android:name=".OverlapFinderActivity"
+            android:exported="true"
+            android:label="الصاق‌گیر" />
+
+        <activity
+            android:name=".OverlapProjectActivity"
+            android:exported="true"
+            android:label="پروژه‌ی الصاق‌گیر" />
+
+        <service
+            android:name=".MyInputMethodService"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+    </application>
+
+</manifest>
