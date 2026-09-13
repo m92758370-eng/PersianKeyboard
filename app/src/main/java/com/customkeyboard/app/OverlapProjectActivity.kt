@@ -161,8 +161,8 @@ class OverlapProjectActivity : AppCompatActivity() {
     private fun runOverlapDetection() {
         val minLen = edtMinLength.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 3
         val nonBlankCount = parts.count { it.isNotBlank() }
-        if (nonBlankCount < 2) {
-            Toast.makeText(this, "حداقل ۲ پارت لازمه", Toast.LENGTH_SHORT).show()
+        if (nonBlankCount < 1) {
+            Toast.makeText(this, "حداقل یه پارت لازمه", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -189,8 +189,12 @@ class OverlapProjectActivity : AppCompatActivity() {
         val phrases = LinkedHashSet<String>()
 
         for (i in texts.indices) {
+            val a = wordArrays[i]
+            if (a.isNotEmpty()) {
+                // تکرار داخل خودِ همین پارت (حتی وقتی فقط یه پارت داریم)
+                collectMaximalRunPhrases(a, a, minLen, phrases, excludeDiagonal = true)
+            }
             for (j in i + 1 until texts.size) {
-                val a = wordArrays[i]
                 val b = wordArrays[j]
                 if (a.isEmpty() || b.isEmpty()) continue
                 collectMaximalRunPhrases(a, b, minLen, phrases)
@@ -199,7 +203,13 @@ class OverlapProjectActivity : AppCompatActivity() {
         return phrases.toList()
     }
 
-    private fun collectMaximalRunPhrases(a: List<String>, b: List<String>, minLen: Int, out: MutableSet<String>) {
+    private fun collectMaximalRunPhrases(
+        a: List<String>,
+        b: List<String>,
+        minLen: Int,
+        out: MutableSet<String>,
+        excludeDiagonal: Boolean = false
+    ) {
         val n = a.size
         val m = b.size
         var prevRow = IntArray(m + 1)
@@ -207,10 +217,13 @@ class OverlapProjectActivity : AppCompatActivity() {
         for (i in 1..n) {
             val currRow = IntArray(m + 1)
             for (j in 1..m) {
-                val len = if (a[i - 1] == b[j - 1]) prevRow[j - 1] + 1 else 0
+                // وقتی خودِ یه پارت رو با خودش مقایسه می‌کنیم، تطبیق یه کلمه با خودش تو همون
+                // موقعیت (i==j) بی‌معنیه و باید نادیده گرفته بشه، وگرنه کل متن با خودش «مشترک» می‌شه
+                val samePosition = excludeDiagonal && i == j
+                val len = if (!samePosition && a[i - 1] == b[j - 1]) prevRow[j - 1] + 1 else 0
                 currRow[j] = len
                 if (len > 0) {
-                    val extends = i < n && j < m && a[i] == b[j]
+                    val extends = i < n && j < m && a[i] == b[j] && !(excludeDiagonal && i + 1 == j + 1)
                     if (!extends && len >= minLen) {
                         out.add(a.subList(i - len, i).joinToString(" "))
                     }
