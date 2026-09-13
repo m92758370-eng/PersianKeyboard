@@ -1,69 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.INTERNET" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp">
 
-    <application
-        android:allowBackup="true"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light">
+        <TextView
+            android:id="@+id/txtProjectName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textStyle="bold"
+            android:textSize="17sp"
+            android:text="پروژه" />
 
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="حداقل کلمه:" />
 
-        <activity
-            android:name=".WordShuffleActivity"
-            android:exported="true"
-            android:label="ترکیب کلمات" />
+        <EditText
+            android:id="@+id/edtMinLength"
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:gravity="center"
+            android:text="3" />
 
-        <activity
-            android:name=".TextReplaceActivity"
-            android:exported="true"
-            android:label="حذف و جایگزینی کلمات" />
+        <Button
+            android:id="@+id/btnFindOverlap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="پیدا کن" />
+    </LinearLayout>
 
-        <activity
-            android:name=".AiWriterActivity"
-            android:exported="true"
-            android:label="دستیار داستان‌نویسی" />
+    <ProgressBar
+        android:id="@+id/progressBarOverlap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
 
-        <activity
-            android:name=".KeyLayoutActivity"
-            android:exported="true"
-            android:label="چیدمان دستی کلیدها" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC" />
 
-        <activity
-            android:name=".OverlapFinderActivity"
-            android:exported="true"
-            android:label="الصاق‌گیر" />
+    <ScrollView
+        android:id="@+id/scrollRoot"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <activity
-            android:name=".OverlapProjectActivity"
-            android:exported="true"
-            android:label="پروژه‌ی الصاق‌گیر" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
 
-        <service
-            android:name=".MyInputMethodService"
-            android:permission="android.permission.BIND_INPUT_METHOD"
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.view.InputMethod" />
-            </intent-filter>
-            <meta-data
-                android:name="android.view.im"
-                android:resource="@xml/method" />
-        </service>
+            <LinearLayout
+                android:id="@+id/chatContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
-    </application>
+            <View
+                android:id="@+id/resultsDivider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#CCCCCC"
+                android:layout_marginVertical="16dp"
+                android:visibility="gone" />
 
-</manifest>
+            <TextView
+                android:id="@+id/resultsHeading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="نتیجه"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:paddingBottom="8dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/resultsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="bottom">
+
+        <EditText
+            android:id="@+id/edtPartInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minLines="1"
+            android:maxLines="6"
+            android:hint="پارت بعدی رو اینجا بنویس یا بچسبون..." />
+
+        <Button
+            android:id="@+id/btnNextPart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="بعدی" />
+    </LinearLayout>
+
+</LinearLayout>
