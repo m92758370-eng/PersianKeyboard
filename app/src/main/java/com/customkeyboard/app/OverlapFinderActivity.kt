@@ -1,48 +1,24 @@
 package com.customkeyboard.app
 
-import android.graphics.Color
+import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.ForegroundColorSpan
-import android.text.style.UnderlineSpan
-import android.graphics.Typeface
 import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import java.util.concurrent.Executors
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
- * «الصاق‌گیر»: چند پارت متن گرفته می‌شه و فقط اون دنباله‌های کلمه‌ای که
- * عیناً بین حداقل دو تا از پارت‌ها مشترک باشن (حتی اگه جمله‌ی کامل نباشن)
- * به‌صورت یه لیست تک و بدون تکرار (بدون نمایش کل متن هر پارت) برگردونده می‌شه.
+ * لیست «پروژه»‌های الصاق‌گیر. هر پروژه یه مجموعه پارت مستقل داره؛
+ * با زدن یه پروژه وارد صفحه‌ی چت‌مانند اون پروژه می‌شی (OverlapProjectActivity).
  */
 class OverlapFinderActivity : AppCompatActivity() {
 
-    private data class PartRow(val container: LinearLayout, val labelView: TextView, val editText: EditText)
+    data class OverlapProject(val id: Long, var name: String, val parts: MutableList<String>)
 
-    private val partRows = mutableListOf<PartRow>()
-
-    private lateinit var partsContainer: LinearLayout
-    private lateinit var resultsContainer: LinearLayout
-    private lateinit var edtMinLength: EditText
-    private lateinit var btnFindOverlap: Button
-    private lateinit var progressBar: ProgressBar
-    private lateinit var scrollRoot: android.widget.ScrollView
-    private lateinit var resultsHeading: TextView
-    private lateinit var scrollHandle: View
-
-    private val executor = Executors.newSingleThreadExecutor()
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private lateinit var projectsContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,254 +26,106 @@ class OverlapFinderActivity : AppCompatActivity() {
 
         if (RemoteStatusHelper.blockIfDisabled(this)) return
 
-        partsContainer = findViewById(R.id.partsContainer)
-        resultsContainer = findViewById(R.id.resultsContainer)
-        edtMinLength = findViewById(R.id.edtMinLength)
-        btnFindOverlap = findViewById(R.id.btnFindOverlap)
-        progressBar = findViewById(R.id.progressBarOverlap)
-        scrollRoot = findViewById(R.id.scrollRoot)
-        resultsHeading = findViewById(R.id.resultsHeading)
-        scrollHandle = findViewById(R.id.scrollHandle)
-        setupScrollHandle()
+        projectsContainer = findViewById(R.id.projectsContainer)
 
-        val saved = PrefsHelper.getOverlapParts(this)
-        if (saved.isEmpty()) {
-            addPartRow(atTop = false)
-            addPartRow(atTop = false)
-        } else {
-            // ترتیب ذخیره‌شده از قبل «جدیدترین اول» هست، پس همون ترتیب رو پشت‌سرهم می‌سازیم
-            for (text in saved) {
-                addPartRow(initialText = text, atTop = false)
-            }
-        }
-
-        findViewById<Button>(R.id.btnAddPart).setOnClickListener {
-            addPartRow(atTop = true)
-            persistParts()
-        }
-
-        btnFindOverlap.setOnClickListener {
-            runOverlapDetection()
+        findViewById<Button>(R.id.btnNewProject).setOnClickListener {
+            val projects = loadProjects()
+            val newProject = OverlapProject(
+                id = System.currentTimeMillis(),
+                name = "پروژه ${projects.size + 1}",
+                parts = mutableListOf()
+            )
+            projects.add(0, newProject) // جدیدترین پروژه همیشه بالا
+            saveProjects(projects)
+            openProject(newProject.id)
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        persistParts()
+    override fun onResume() {
+        super.onResume()
+        refreshProjectsUI()
     }
 
-    private fun persistParts() {
-        PrefsHelper.saveOverlapParts(this, partRows.map { it.editText.text.toString() })
+    private fun openProject(id: Long) {
+        startActivity(Intent(this, OverlapProjectActivity::class.java).putExtra("projectId", id))
     }
 
-    // دستگیره‌ی کناری که با کشیدنش کل صفحه بالا/پایین اسکرول می‌شه
-    private fun setupScrollHandle() {
-        val content = scrollRoot.getChildAt(0)
-        var trackHeight = 0f
-        var dragStartRawY = 0f
-        var dragStartHandleY = 0f
-
-        fun updateHandleFromScroll() {
-            val maxScroll = (content.height - scrollRoot.height).coerceAtLeast(1)
-            val fraction = scrollRoot.scrollY.toFloat() / maxScroll.toFloat()
-            scrollHandle.translationY = fraction.coerceIn(0f, 1f) * trackHeight
+    private fun loadProjects(): MutableList<OverlapProject> {
+        val arr = JSONArray(PrefsHelper.getOverlapProjectsJson(this))
+        val list = mutableListOf<OverlapProject>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val partsArr = obj.getJSONArray("parts")
+            val parts = mutableListOf<String>()
+            for (j in 0 until partsArr.length()) parts.add(partsArr.getString(j))
+            list.add(OverlapProject(obj.getLong("id"), obj.getString("name"), parts))
         }
-
-        scrollRoot.viewTreeObserver.addOnGlobalLayoutListener {
-            trackHeight = (scrollRoot.height - scrollHandle.height).toFloat()
-            updateHandleFromScroll()
-        }
-
-        scrollRoot.setOnScrollChangeListener { _, _, _, _, _ ->
-            if (trackHeight > 0f) updateHandleFromScroll()
-        }
-
-        scrollHandle.setOnTouchListener { v, event ->
-            when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    dragStartRawY = event.rawY
-                    dragStartHandleY = v.translationY
-                    true
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    val delta = event.rawY - dragStartRawY
-                    val newHandleY = (dragStartHandleY + delta).coerceIn(0f, trackHeight)
-                    v.translationY = newHandleY
-                    val maxScroll = (content.height - scrollRoot.height).coerceAtLeast(1)
-                    val fraction = if (trackHeight > 0f) newHandleY / trackHeight else 0f
-                    scrollRoot.scrollTo(0, (fraction * maxScroll).toInt())
-                    true
-                }
-                else -> true
-            }
-        }
+        return list
     }
 
-    private fun addPartRow(initialText: String = "", atTop: Boolean = false) {
+    private fun saveProjects(projects: List<OverlapProject>) {
+        val arr = JSONArray()
+        for (p in projects) {
+            val obj = JSONObject()
+            obj.put("id", p.id)
+            obj.put("name", p.name)
+            val partsArr = JSONArray()
+            p.parts.forEach { partsArr.put(it) }
+            obj.put("parts", partsArr)
+            arr.put(obj)
+        }
+        PrefsHelper.saveOverlapProjectsJson(this, arr.toString())
+    }
+
+    private fun refreshProjectsUI() {
+        projectsContainer.removeAllViews()
+        val projects = loadProjects()
         val density = resources.displayMetrics.density
 
-        val rowContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = (16 * density).toInt() }
-        }
-
-        val headerRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val label = TextView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setTypeface(typeface, Typeface.BOLD)
-        }
-
-        val btnRemove = Button(this).apply {
-            text = "حذف"
-            textSize = 12f
-            setOnClickListener {
-                partsContainer.removeView(rowContainer)
-                partRows.removeAll { it.container == rowContainer }
-                relabelRows()
-                persistParts() // فقط با زدن همین دکمه پاک می‌شه، نه با خروج از صفحه
+        if (projects.isEmpty()) {
+            val empty = TextView(this).apply {
+                text = "هنوز پروژه‌ای نساختی. دکمه‌ی بالا رو بزن."
+                setTextColor(android.graphics.Color.parseColor("#888888"))
             }
-        }
-
-        headerRow.addView(label)
-        headerRow.addView(btnRemove)
-
-        val editText = EditText(this).apply {
-            minLines = 4
-            gravity = Gravity.TOP or Gravity.START
-            hint = "متن این پارت رو اینجا بچسبون..."
-            setText(initialText)
-        }
-
-        rowContainer.addView(headerRow)
-        rowContainer.addView(editText)
-
-        if (atTop && partsContainer.childCount > 0) {
-            partsContainer.addView(rowContainer, 0)
-            partRows.add(0, PartRow(rowContainer, label, editText))
-        } else {
-            partsContainer.addView(rowContainer)
-            partRows.add(PartRow(rowContainer, label, editText))
-        }
-        relabelRows()
-    }
-
-    private fun relabelRows() {
-        for ((index, row) in partRows.withIndex()) {
-            row.labelView.text = "پارت ${index + 1}"
-        }
-    }
-
-    private fun runOverlapDetection() {
-        val minLen = edtMinLength.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 3
-        val texts = partRows.map { it.editText.text.toString() }
-        val nonBlankCount = texts.count { it.isNotBlank() }
-        if (nonBlankCount < 2) {
-            Toast.makeText(this, "حداقل ۲ پارت با متن لازمه", Toast.LENGTH_SHORT).show()
+            projectsContainer.addView(empty)
             return
         }
 
-        btnFindOverlap.isEnabled = false
-        progressBar.visibility = View.VISIBLE
-
-        executor.execute {
-            val phrases = computeOverlaps(texts, minLen)
-            mainHandler.post {
-                progressBar.visibility = View.GONE
-                btnFindOverlap.isEnabled = true
-                showResults(phrases)
-                scrollRoot.post { scrollRoot.fullScroll(View.FOCUS_DOWN) }
+        for (project in projects) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = (10 * density).toInt() }
+                setPadding((12 * density).toInt(), (12 * density).toInt(), (12 * density).toInt(), (12 * density).toInt())
+                setBackgroundColor(android.graphics.Color.parseColor("#1F1F1F"))
+                isClickable = true
+                setOnClickListener { openProject(project.id) }
             }
-        }
-    }
 
-    // کلمه‌ها رو با هر ترکیبی از فاصله‌ی معمولی، خط جدید، یا نیم‌فاصله (‌ZWNJ) از هم جدا می‌کنه
-    private fun tokenize(text: String): List<String> =
-        Regex("[^\\s\u200c]+").findAll(text).map { it.value }.toList()
-
-    // بین همه‌ی جفت‌پارت‌ها می‌گرده و فقط خودِ عبارت‌های مشترک رو (بدون تکرار) برمی‌گردونه
-    private fun computeOverlaps(texts: List<String>, minLen: Int): List<String> {
-        val wordArrays = texts.map { tokenize(it) }
-        val phrases = LinkedHashSet<String>()
-
-        for (i in texts.indices) {
-            for (j in i + 1 until texts.size) {
-                val a = wordArrays[i]
-                val b = wordArrays[j]
-                if (a.isEmpty() || b.isEmpty()) continue
-                collectMaximalRunPhrases(a, b, minLen, phrases)
+            val label = TextView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                val preview = project.parts.lastOrNull()?.take(40) ?: "بدون پارت هنوز"
+                text = "${project.name}\n${project.parts.size} پارت — $preview"
+                textSize = 14f
             }
-        }
 
-        return phrases.toList()
-    }
-
-    // پیدا کردن همه‌ی دنباله‌های حداکثریِ کلمات مشترک (پشت‌سرهم) بین دو لیست کلمه،
-    // با یه DP شبیه LCS ولی فقط برای دنباله‌های پیوسته (نه هر جفت مشترک پراکنده)
-    private fun collectMaximalRunPhrases(a: List<String>, b: List<String>, minLen: Int, out: MutableSet<String>) {
-        val n = a.size
-        val m = b.size
-        var prevRow = IntArray(m + 1)
-
-        for (i in 1..n) {
-            val currRow = IntArray(m + 1)
-            for (j in 1..m) {
-                val len = if (a[i - 1] == b[j - 1]) prevRow[j - 1] + 1 else 0
-                currRow[j] = len
-                if (len > 0) {
-                    val extends = i < n && j < m && a[i] == b[j]
-                    if (!extends && len >= minLen) {
-                        out.add(a.subList(i - len, i).joinToString(" "))
-                    }
+            val deleteBtn = Button(this).apply {
+                text = "حذف"
+                textSize = 12f
+                setOnClickListener {
+                    val current = loadProjects()
+                    current.removeAll { it.id == project.id }
+                    saveProjects(current)
+                    refreshProjectsUI()
                 }
             }
-            prevRow = currRow
-        }
-    }
 
-    private fun underlinedRed(text: String): SpannableStringBuilder {
-        val builder = SpannableStringBuilder(text)
-        builder.setSpan(ForegroundColorSpan(Color.RED), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        builder.setSpan(UnderlineSpan(), 0, text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        return builder
-    }
-
-    private fun showResults(phrases: List<String>) {
-        resultsContainer.removeAllViews()
-        val density = resources.displayMetrics.density
-
-        if (phrases.isEmpty()) {
-            val note = TextView(this).apply {
-                text = "هیچ عبارت مشترکی پیدا نشد"
-                setTextColor(Color.parseColor("#888888"))
-            }
-            resultsContainer.addView(note)
-            return
-        }
-
-        for ((idx, phrase) in phrases.withIndex()) {
-            val numberLabel = TextView(this).apply {
-                text = "${idx + 1}."
-                setTypeface(typeface, Typeface.BOLD)
-                textSize = 13f
-                setTextColor(Color.parseColor("#888888"))
-            }
-
-            val body = TextView(this).apply {
-                text = underlinedRed(phrase)
-                setTextIsSelectable(true)
-                textSize = 15f
-                setPadding(0, (2 * density).toInt(), 0, (10 * density).toInt())
-            }
-
-            resultsContainer.addView(numberLabel)
-            resultsContainer.addView(body)
+            row.addView(label)
+            row.addView(deleteBtn)
+            projectsContainer.addView(row)
         }
     }
 }
