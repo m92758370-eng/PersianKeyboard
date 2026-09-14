@@ -36,6 +36,9 @@ object PrefsHelper {
     private const val KEY_LETTER_WIDTH_WEIGHTS = "letter_width_weights"
     private const val KEY_LETTER_ROW_HEIGHT_WEIGHTS = "letter_row_height_weights"
     private const val KEY_OVERLAP_PARTS = "overlap_finder_parts"
+    private const val KEY_SPECIAL_KEY_WIDTH_WEIGHTS = "special_key_width_weights"
+    private const val KEY_TOOLBAR_HEIGHT_WEIGHT = "toolbar_height_weight"
+    private const val KEY_BOTTOM_ROW_HEIGHT_WEIGHT = "bottom_row_height_weight"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -381,10 +384,48 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_LETTER_ROW_HEIGHT_WEIGHTS, weights.joinToString(SEPARATOR)).apply()
     }
 
+    // وزن عرض کلیدهای خاص: کلیدهای نوار بالا (میکروفون/ترجمه/تنظیمات/ایموجی/کلیپ‌بورد/شبکه)
+    // و کلیدهای ردیف پایین (؟١٢٣/اتوتایپ/زبان/فاصله/توقف-ادامه/نیم‌فاصله/اینتر).
+    // کلید هر آیتم یه شناسه‌ی ثابته (مثلاً "toolbar_mic" یا "space")، نه لیبل نمایشی‌ش.
+    fun getSpecialKeyWidthWeights(context: Context): Map<String, Float> {
+        val raw = prefs(context).getString(KEY_SPECIAL_KEY_WIDTH_WEIGHTS, "") ?: ""
+        if (raw.isEmpty()) return emptyMap()
+        return raw.split(SEPARATOR).mapNotNull { entry ->
+            val parts = entry.split(PAIR_SEPARATOR)
+            if (parts.size == 2) parts[0] to (parts[1].toFloatOrNull() ?: 1f) else null
+        }.toMap()
+    }
+
+    fun setSpecialKeyWidthWeights(context: Context, weights: Map<String, Float>) {
+        val serialized = weights.entries.joinToString(SEPARATOR) { "${it.key}$PAIR_SEPARATOR${it.value}" }
+        prefs(context).edit().putString(KEY_SPECIAL_KEY_WIDTH_WEIGHTS, serialized).apply()
+    }
+
+    // وزن ارتفاع نوار بالا (پیش‌فرض ۱)
+    fun getToolbarHeightWeight(context: Context): Float {
+        return prefs(context).getFloat(KEY_TOOLBAR_HEIGHT_WEIGHT, 1f)
+    }
+
+    fun setToolbarHeightWeight(context: Context, weight: Float) {
+        prefs(context).edit().putFloat(KEY_TOOLBAR_HEIGHT_WEIGHT, weight).apply()
+    }
+
+    // وزن ارتفاع ردیف پایین (پیش‌فرض ۱)
+    fun getBottomRowHeightWeight(context: Context): Float {
+        return prefs(context).getFloat(KEY_BOTTOM_ROW_HEIGHT_WEIGHT, 1f)
+    }
+
+    fun setBottomRowHeightWeight(context: Context, weight: Float) {
+        prefs(context).edit().putFloat(KEY_BOTTOM_ROW_HEIGHT_WEIGHT, weight).apply()
+    }
+
     fun resetKeyboardEditorLayout(context: Context) {
         prefs(context).edit()
             .remove(KEY_LETTER_WIDTH_WEIGHTS)
             .remove(KEY_LETTER_ROW_HEIGHT_WEIGHTS)
+            .remove(KEY_SPECIAL_KEY_WIDTH_WEIGHTS)
+            .remove(KEY_TOOLBAR_HEIGHT_WEIGHT)
+            .remove(KEY_BOTTOM_ROW_HEIGHT_WEIGHT)
             .apply()
     }
 }
