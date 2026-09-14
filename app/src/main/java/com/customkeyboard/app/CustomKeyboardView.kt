@@ -295,15 +295,37 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         return KeyboardLayouts.chunkToRows(custom, KeyboardLayouts.persianRowSizes())
     }
 
+    // شناسه‌ی ثابتِ هر کلیدِ نوار بالا، هم‌ترتیب با حلقه‌ی زیر و با KeyboardEditorActivity
+    private val toolbarKeyIds = listOf(
+        "toolbar_mic", "toolbar_translate", "toolbar_settings",
+        "toolbar_emoji", "toolbar_clipboard", "toolbar_grid"
+    )
+
+    // شناسه‌ + عرضِ پیش‌فرضِ هر کلیدِ ردیف پایین (جمعشون از ۱۰۰ باید همون نسبت‌های قبلی رو بده)
+    private val bottomKeyDefaults = listOf(
+        "symbols_toggle" to 12f, "autotype" to 14f, "lang_switch" to 14f,
+        "space" to 22f, "pause_resume" to 13f, "zwnj" to 9f, "enter" to 16f
+    )
+    private val bottomKeyTypes = listOf(
+        KeyType.SYMBOLS_TOGGLE, KeyType.AUTOTYPE, KeyType.LANG_SWITCH,
+        KeyType.SPACE, KeyType.PAUSE_RESUME, KeyType.ZWNJ, KeyType.ENTER
+    )
+
     private fun rebuildKeys(w: Int, h: Int) {
         keys.clear()
         if (w == 0 || h == 0) return
 
-        val toolbarHeight = TOOLBAR_HEIGHT_DP * density
-        val toolbarItemW = w / 6f
+        // وزن‌های عرض/ارتفاعِ کلیدهای خاص (نوار بالا + ردیف پایین)، قابل ویرایش از KeyboardEditorActivity
+        val specialWeights = PrefsHelper.getSpecialKeyWidthWeights(context)
+        val toolbarHeightWeight = PrefsHelper.getToolbarHeightWeight(context)
+        val bottomRowHeightWeight = PrefsHelper.getBottomRowHeightWeight(context)
+
+        val toolbarHeight = TOOLBAR_HEIGHT_DP * density * toolbarHeightWeight
+        val toolbarWeights = toolbarKeyIds.map { specialWeights[it] ?: 1f }
+        val toolbarWeightSum = toolbarWeights.sum().takeIf { it > 0f } ?: 1f
+        var leftTb = 0f
         for (i in 0 until 6) {
-            val left = toolbarItemW * i
-            val right = left + toolbarItemW
+            val right = leftTb + w * (toolbarWeights[i] / toolbarWeightSum)
             val type = when (i) {
                 0 -> KeyType.TOOLBAR_MIC
                 1 -> KeyType.TOOLBAR_TRANSLATE
@@ -312,7 +334,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 4 -> KeyType.TOOLBAR_CLIPBOARD
                 else -> KeyType.TOOLBAR_GRID
             }
-            keys.add(KeyRect("", RectF(left, 0f, right, toolbarHeight), type))
+            keys.add(KeyRect("", RectF(leftTb, 0f, right, toolbarHeight), type))
+            leftTb = right
         }
 
         val contentRows: List<List<String>> = when (mode) {
@@ -325,19 +348,15 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val useWeightedLetters = mode == KeyboardMode.LETTERS && usePersian
         val widthWeights = if (useWeightedLetters) PrefsHelper.getLetterWidthWeights(context) else emptyMap()
-        val rowHeightWeights = if (useWeightedLetters) PrefsHelper.getPersianRowHeightWeights(context) else null
+        val rowHeightWeightsRaw = if (useWeightedLetters) PrefsHelper.getPersianRowHeightWeights(context) else null
 
         val keyboardAreaHeight = h - toolbarHeight
-        val totalRows = contentRows.size + 1
-        rowHeight = keyboardAreaHeight / totalRows
+        rowHeight = keyboardAreaHeight / (contentRows.size + 1)
 
-        // ارتفاع واقعی هر ردیف حروف (اگه کاربر تو ویرایش‌گر کیبورد تغییرش داده باشه)
-        val letterRowHeights: List<Float> = if (rowHeightWeights != null) {
-            val totalWeight = rowHeightWeights.sum() + 1f // +۱ برای سهم ردیف پایین
-            rowHeightWeights.map { keyboardAreaHeight * (it / totalWeight) }
-        } else {
-            List(contentRows.size) { rowHeight }
-        }
+        // ارتفاع واقعی هر ردیف حروف + سهمِ ردیف پایین از کل ارتفاع (هر دو قابل تغییر تو ویرایش‌گر)
+        val rowHeightWeightsResolved = rowHeightWeightsRaw ?: List(contentRows.size) { 1f }
+        val totalWeight = rowHeightWeightsResolved.sum() + bottomRowHeightWeight
+        val letterRowHeights: List<Float> = rowHeightWeightsResolved.map { keyboardAreaHeight * (it / totalWeight) }
 
         var runningTop = toolbarHeight
         for ((rowIndex, row) in contentRows.withIndex()) {
@@ -349,7 +368,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
             if (isLastContentRow) {
                 val rowWeights = row.map { widthWeights[it] ?: 1f }
-                val sumWeights = rowWeights.sum() + 1f // +۱ برای بک‌اسپیس
+                val backspaceWeight = widthWeights["⌫"] ?: 1f
+                val sumWeights = rowWeights.sum() + backspaceWeight
                 var left = 0f
                 for ((colIndex, label) in row.withIndex()) {
                     val right = left + w * (rowWeights[colIndex] / sumWeights)
@@ -376,29 +396,22 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bottomTop = runningTop
         val bottomBottom = toolbarHeight + keyboardAreaHeight
-        val symbolsToggleW = w * 0.12f
-        val autoW = w * 0.14f
-        val switchW = w * 0.14f
-        val pauseW = w * 0.13f
-        val zwnjW = w * 0.09f
-        val enterW = w * 0.16f
-        val spaceW = w - symbolsToggleW - autoW - switchW - pauseW - zwnjW - enterW
+        val bottomWeights = bottomKeyDefaults.map { (id, def) -> specialWeights[id] ?: def }
+        val bottomWeightSum = bottomWeights.sum().takeIf { it > 0f } ?: 1f
+        val spaceLabel = if (mode == KeyboardMode.NUMBERS) "٠" else PrefsHelper.getSpaceLabel(context)
 
         var x = 0f
-        keys.add(KeyRect("", RectF(x, bottomTop, x + symbolsToggleW, bottomBottom), KeyType.SYMBOLS_TOGGLE))
-        x += symbolsToggleW
-        keys.add(KeyRect("", RectF(x, bottomTop, x + autoW, bottomBottom), KeyType.AUTOTYPE))
-        x += autoW
-        keys.add(KeyRect("", RectF(x, bottomTop, x + switchW, bottomBottom), KeyType.LANG_SWITCH))
-        x += switchW
-        val spaceLabel = if (mode == KeyboardMode.NUMBERS) "٠" else PrefsHelper.getSpaceLabel(context)
-        keys.add(KeyRect(spaceLabel, RectF(x, bottomTop, x + spaceW, bottomBottom), KeyType.SPACE))
-        x += spaceW
-        keys.add(KeyRect("", RectF(x, bottomTop, x + pauseW, bottomBottom), KeyType.PAUSE_RESUME))
-        x += pauseW
-        keys.add(KeyRect("", RectF(x, bottomTop, x + zwnjW, bottomBottom), KeyType.ZWNJ))
-        x += zwnjW
-        keys.add(KeyRect("⏎", RectF(x, bottomTop, x + enterW, bottomBottom), KeyType.ENTER))
+        for (i in bottomKeyDefaults.indices) {
+            val right = x + w * (bottomWeights[i] / bottomWeightSum)
+            val type = bottomKeyTypes[i]
+            val label = when (type) {
+                KeyType.SPACE -> spaceLabel
+                KeyType.ENTER -> "⏎"
+                else -> ""
+            }
+            keys.add(KeyRect(label, RectF(x, bottomTop, right, bottomBottom), type))
+            x = right
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
