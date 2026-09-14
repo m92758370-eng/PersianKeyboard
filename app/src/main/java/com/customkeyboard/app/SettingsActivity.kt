@@ -85,6 +85,10 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, OverlapFinderActivity::class.java))
         }
 
+        findViewById<Button>(R.id.btnKeyboardEditor).setOnClickListener {
+            startActivity(Intent(this, KeyboardEditorActivity::class.java))
+        }
+
         buildLetterRows()
 
         txtBackgroundStatus = findViewById(R.id.txtBackgroundStatus)
