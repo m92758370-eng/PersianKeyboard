@@ -33,6 +33,8 @@ object PrefsHelper {
     private const val DEFAULT_SPACE_LABEL = "کینگ آنتونی"
     private const val KEY_DARK_MODE = "dark_mode"
     private const val KEY_CUSTOM_PERSIAN_ORDER = "custom_persian_key_order"
+    private const val KEY_LETTER_WIDTH_WEIGHTS = "letter_width_weights"
+    private const val KEY_LETTER_ROW_HEIGHT_WEIGHTS = "letter_row_height_weights"
     private const val KEY_OVERLAP_PARTS = "overlap_finder_parts"
 
     const val DEFAULT_DELAY_MS = 15L
@@ -350,5 +352,39 @@ object PrefsHelper {
 
     fun resetCustomPersianOrder(context: Context) {
         prefs(context).edit().remove(KEY_CUSTOM_PERSIAN_ORDER).apply()
+    }
+
+    // وزن عرض هر حرف (نسبت به بقیه‌ی حروفِ همون ردیف)؛ اگه حرفی تو این مپ نباشه، وزنش ۱ (پیش‌فرض) حساب می‌شه
+    fun getLetterWidthWeights(context: Context): Map<String, Float> {
+        val raw = prefs(context).getString(KEY_LETTER_WIDTH_WEIGHTS, "") ?: ""
+        if (raw.isEmpty()) return emptyMap()
+        return raw.split(SEPARATOR).mapNotNull { entry ->
+            val parts = entry.split(PAIR_SEPARATOR)
+            if (parts.size == 2) parts[0] to (parts[1].toFloatOrNull() ?: 1f) else null
+        }.toMap()
+    }
+
+    fun setLetterWidthWeights(context: Context, weights: Map<String, Float>) {
+        val serialized = weights.entries.joinToString(SEPARATOR) { "${it.key}$PAIR_SEPARATOR${it.value}" }
+        prefs(context).edit().putString(KEY_LETTER_WIDTH_WEIGHTS, serialized).apply()
+    }
+
+    // وزن ارتفاع هر کدوم از ۳ ردیف حروف فارسی (پیش‌فرض هر سه ۱)
+    fun getPersianRowHeightWeights(context: Context): List<Float> {
+        val raw = prefs(context).getString(KEY_LETTER_ROW_HEIGHT_WEIGHTS, "") ?: ""
+        if (raw.isEmpty()) return listOf(1f, 1f, 1f)
+        val list = raw.split(SEPARATOR).mapNotNull { it.toFloatOrNull() }
+        return if (list.size == 3) list else listOf(1f, 1f, 1f)
+    }
+
+    fun setPersianRowHeightWeights(context: Context, weights: List<Float>) {
+        prefs(context).edit().putString(KEY_LETTER_ROW_HEIGHT_WEIGHTS, weights.joinToString(SEPARATOR)).apply()
+    }
+
+    fun resetKeyboardEditorLayout(context: Context) {
+        prefs(context).edit()
+            .remove(KEY_LETTER_WIDTH_WEIGHTS)
+            .remove(KEY_LETTER_ROW_HEIGHT_WEIGHTS)
+            .apply()
     }
 }
