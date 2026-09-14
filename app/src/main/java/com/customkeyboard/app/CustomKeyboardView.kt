@@ -71,7 +71,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         isAntiAlias = true
     }
     private val enterAccentPaint = Paint().apply {
-        color = Color.parseColor("#7BA7F5")
+        color = Color.parseColor("#3B4A5E") // آبی مات و تیره (slate)، نه آبی روشن
         isAntiAlias = true
     }
     private val highlightPaint = Paint().apply {
@@ -323,42 +323,59 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
         val contentKeyType = if (mode == KeyboardMode.LETTERS) KeyType.LETTER else KeyType.SYMBOL
 
+        val useWeightedLetters = mode == KeyboardMode.LETTERS && usePersian
+        val widthWeights = if (useWeightedLetters) PrefsHelper.getLetterWidthWeights(context) else emptyMap()
+        val rowHeightWeights = if (useWeightedLetters) PrefsHelper.getPersianRowHeightWeights(context) else null
+
         val keyboardAreaHeight = h - toolbarHeight
         val totalRows = contentRows.size + 1
         rowHeight = keyboardAreaHeight / totalRows
 
+        // ارتفاع واقعی هر ردیف حروف (اگه کاربر تو ویرایش‌گر کیبورد تغییرش داده باشه)
+        val letterRowHeights: List<Float> = if (rowHeightWeights != null) {
+            val totalWeight = rowHeightWeights.sum() + 1f // +۱ برای سهم ردیف پایین
+            rowHeightWeights.map { keyboardAreaHeight * (it / totalWeight) }
+        } else {
+            List(contentRows.size) { rowHeight }
+        }
+
+        var runningTop = toolbarHeight
         for ((rowIndex, row) in contentRows.withIndex()) {
             val isLastContentRow = rowIndex == contentRows.size - 1
-            val top = toolbarHeight + rowHeight * rowIndex
-            val bottom = top + rowHeight
+            val top = runningTop
+            val thisRowHeight = letterRowHeights.getOrElse(rowIndex) { rowHeight }
+            val bottom = top + thisRowHeight
+            runningTop = bottom
 
             if (isLastContentRow) {
-                val totalCols = row.size + 1
-                val itemWidth = w.toFloat() / totalCols
+                val rowWeights = row.map { widthWeights[it] ?: 1f }
+                val sumWeights = rowWeights.sum() + 1f // +۱ برای بک‌اسپیس
+                var left = 0f
                 for ((colIndex, label) in row.withIndex()) {
-                    val left = itemWidth * colIndex
-                    val right = left + itemWidth
+                    val right = left + w * (rowWeights[colIndex] / sumWeights)
                     keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType))
+                    left = right
                 }
-                val backLeft = itemWidth * row.size
-                keys.add(KeyRect("⌫", RectF(backLeft, top, w.toFloat(), bottom), KeyType.BACKSPACE))
+                keys.add(KeyRect("⌫", RectF(left, top, w.toFloat(), bottom), KeyType.BACKSPACE))
             } else {
-                val keyWidth = w.toFloat() / row.size
+                val rowWeights = row.map { widthWeights[it] ?: 1f }
+                val sumWeights = rowWeights.sum()
+                var left = 0f
                 for ((colIndex, label) in row.withIndex()) {
-                    val left = keyWidth * colIndex
-                    val right = left + keyWidth
+                    val right = left + w * (rowWeights[colIndex] / sumWeights)
                     val hint = if (mode == KeyboardMode.LETTERS && usePersian && rowIndex == 0) {
                         KeyboardLayouts.PERSIAN_ROW1_DIGIT_HINTS.getOrElse(colIndex) { "" }
                     } else {
                         ""
                     }
                     keys.add(KeyRect(label, RectF(left, top, right, bottom), contentKeyType, hint))
+                    left = right
                 }
             }
         }
 
-        val bottomTop = toolbarHeight + rowHeight * contentRows.size
-        val bottomBottom = bottomTop + rowHeight
+        val bottomTop = runningTop
+        val bottomBottom = toolbarHeight + keyboardAreaHeight
         val symbolsToggleW = w * 0.12f
         val autoW = w * 0.14f
         val switchW = w * 0.14f
@@ -413,17 +430,20 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.label == highlightedLabel -> highlightPaint
                 editingSpaceLabel && key.type == KeyType.AUTOTYPE -> accentPaint
                 editingSpaceLabel && key.type == KeyType.LANG_SWITCH -> highlightPaint
-                key.type == KeyType.ENTER -> enterAccentPaint
+                key.type == KeyType.ENTER || key.type == KeyType.SYMBOLS_TOGGLE ||
+                    key.type == KeyType.AUTOTYPE || key.type == KeyType.ZWNJ -> enterAccentPaint
                 key.type == KeyType.BACKSPACE -> accentPaint
                 key.type == KeyType.LETTER || key.type == KeyType.SYMBOL -> keyPaint
                 else -> specialKeyPaint
             }
             val pad = keyPadDp * density
-            val corner = keyCornerDp * density
-            canvas.drawRoundRect(
-                RectF(key.rect.left + pad, key.rect.top + pad, key.rect.right - pad, key.rect.bottom - pad),
-                corner, corner, paint
-            )
+            val paddedRect = RectF(key.rect.left + pad, key.rect.top + pad, key.rect.right - pad, key.rect.bottom - pad)
+            val corner = if (key.type == KeyType.SYMBOLS_TOGGLE || key.type == KeyType.ENTER) {
+                paddedRect.height() / 2f // شکل کپسولی/قرصی برای ۱۲۳ و Enter
+            } else {
+                keyCornerDp * density
+            }
+            canvas.drawRoundRect(paddedRect, corner, corner, paint)
             val cx = key.rect.centerX()
             val cy = key.rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
 
