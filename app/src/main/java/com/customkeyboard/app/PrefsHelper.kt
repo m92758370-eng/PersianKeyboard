@@ -39,6 +39,9 @@ object PrefsHelper {
     private const val KEY_SPECIAL_KEY_WIDTH_WEIGHTS = "special_key_width_weights"
     private const val KEY_TOOLBAR_HEIGHT_WEIGHT = "toolbar_height_weight"
     private const val KEY_BOTTOM_ROW_HEIGHT_WEIGHT = "bottom_row_height_weight"
+    private const val KEY_KB_WIDTH_SCALE = "kb_width_scale"
+    private const val KEY_KB_HEIGHT_SCALE = "kb_height_scale"
+    private const val KEY_KB_LEFT_MARGIN_FRACTION = "kb_left_margin_fraction"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -426,6 +429,43 @@ object PrefsHelper {
             .remove(KEY_SPECIAL_KEY_WIDTH_WEIGHTS)
             .remove(KEY_TOOLBAR_HEIGHT_WEIGHT)
             .remove(KEY_BOTTOM_ROW_HEIGHT_WEIGHT)
+            .apply()
+    }
+
+    // ---------- بزرگ/کوچیک کردنِ کلِ کیبورد (شبیه حالت کیبورد کوچیک/شناور شیائومی) ----------
+    // عرض کل کیبورد نسبت به عرض صفحه‌ی گوشی (پیش‌فرض ۱ یعنی تمام‌عرض)
+    fun getKeyboardWidthScale(context: Context): Float {
+        return prefs(context).getFloat(KEY_KB_WIDTH_SCALE, 1f)
+    }
+
+    fun setKeyboardWidthScale(context: Context, scale: Float) {
+        prefs(context).edit().putFloat(KEY_KB_WIDTH_SCALE, scale).apply()
+    }
+
+    // ارتفاع کل کیبورد نسبت به ارتفاع پیش‌فرض (پیش‌فرض ۱)
+    fun getKeyboardHeightScale(context: Context): Float {
+        return prefs(context).getFloat(KEY_KB_HEIGHT_SCALE, 1f)
+    }
+
+    fun setKeyboardHeightScale(context: Context, scale: Float) {
+        prefs(context).edit().putFloat(KEY_KB_HEIGHT_SCALE, scale).apply()
+    }
+
+    // وقتی کیبورد کوچیک‌تر از عرض صفحه‌ست، این می‌گه چقدر از فضای خالیِ سمت چپ/راست
+    // به سمت چپ بره؛ ۰ یعنی بچسبه به یه گوشه، ۱ یعنی بچسبه به گوشه‌ی دیگه، ۰.۵ یعنی وسط
+    fun getKeyboardLeftMarginFraction(context: Context): Float {
+        return prefs(context).getFloat(KEY_KB_LEFT_MARGIN_FRACTION, 0.5f)
+    }
+
+    fun setKeyboardLeftMarginFraction(context: Context, fraction: Float) {
+        prefs(context).edit().putFloat(KEY_KB_LEFT_MARGIN_FRACTION, fraction).apply()
+    }
+
+    fun resetKeyboardSizing(context: Context) {
+        prefs(context).edit()
+            .remove(KEY_KB_WIDTH_SCALE)
+            .remove(KEY_KB_HEIGHT_SCALE)
+            .remove(KEY_KB_LEFT_MARGIN_FRACTION)
             .apply()
     }
 }
