@@ -31,6 +31,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onPauseResumeButton()
         fun onWordShuffleButton()
         fun onSettingsButton()
+        fun onToggleResizeMode()
     }
 
     var listener: Listener? = null
@@ -139,7 +140,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var langDoubleTapCandidate = false
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val heightPx = ((230 + TOOLBAR_HEIGHT_DP) * context.resources.displayMetrics.density).toInt()
+        val heightScale = PrefsHelper.getKeyboardHeightScale(context)
+        val heightPx = ((230 + TOOLBAR_HEIGHT_DP) * context.resources.displayMetrics.density * heightScale).toInt()
         val width = MeasureSpec.getSize(widthMeasureSpec)
         setMeasuredDimension(width, heightPx)
     }
@@ -691,7 +693,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     listener?.onCommitText(clipText)
                 }
             }
-            KeyType.TOOLBAR_MIC, KeyType.TOOLBAR_TRANSLATE, KeyType.TOOLBAR_GRID -> {
+            KeyType.TOOLBAR_GRID -> listener?.onToggleResizeMode()
+            KeyType.TOOLBAR_MIC, KeyType.TOOLBAR_TRANSLATE -> {
                 android.widget.Toast.makeText(context, "این بخش هنوز آماده نیست", android.widget.Toast.LENGTH_SHORT).show()
             }
             KeyType.LETTER -> handleLetterTap(key.label)
