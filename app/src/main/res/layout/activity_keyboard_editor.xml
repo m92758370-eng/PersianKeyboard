@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ویرایش‌گر کیبورد"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#666666"
+        android:paddingBottom="8dp"
+        android:text="هر کلید رو از گوشه‌ی پایین-راستش بکش تا سایزش عوض بشه (عرض/ارتفاع). خود کلید رو بکش چپ/راست تا جاش عوض بشه." />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingBottom="8dp">
+
+        <Button
+            android:id="@+id/btnResetEditor"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="بازنشانی به پیش‌فرض" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="#000000" />
+
+</LinearLayout>
