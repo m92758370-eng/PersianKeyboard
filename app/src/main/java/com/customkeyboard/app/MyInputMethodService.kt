@@ -1,29 +1,295 @@
 package com.customkeyboard.app
 
 import android.content.Intent
+import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 
 class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
+    private lateinit var rootContainer: LinearLayout
+    private lateinit var controlRow: LinearLayout
+    private lateinit var keyboardOuter: FrameLayout
+    private lateinit var keyboardCard: FrameLayout
     private lateinit var keyboardView: CustomKeyboardView
+    private lateinit var leftHandle: View
+    private lateinit var rightHandle: View
+    private lateinit var bottomHandle: View
+    private var resizeModeOn = false
+
     private val handler = Handler(Looper.getMainLooper())
 
     private var autoTypeRunning = false
     private var autoTypeIndex = 0
     private var autoTypeChars: List<String> = emptyList()
 
+    private fun dp(value: Float): Int = (value * resources.displayMetrics.density).toInt()
+
     override fun onCreateInputView(): View {
         keyboardView = CustomKeyboardView(this)
         keyboardView.listener = this
+
+        keyboardCard = FrameLayout(this)
+        keyboardCard.addView(
+            keyboardView,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        )
+
+        leftHandle = buildSideHandle()
+        rightHandle = buildSideHandle()
+        bottomHandle = buildBottomHandle()
+        keyboardCard.addView(leftHandle, FrameLayout.LayoutParams(dp(14f), ViewGroup.LayoutParams.MATCH_PARENT).also {
+            it.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+        })
+        keyboardCard.addView(rightHandle, FrameLayout.LayoutParams(dp(14f), ViewGroup.LayoutParams.MATCH_PARENT).also {
+            it.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        })
+        keyboardCard.addView(bottomHandle, FrameLayout.LayoutParams(dp(64f), dp(16f)).also {
+            it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        })
+
+        keyboardOuter = FrameLayout(this)
+        keyboardOuter.addView(keyboardCard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        controlRow = buildControlRow()
+        controlRow.visibility = View.GONE
+
+        rootContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        rootContainer.addView(controlRow)
+        rootContainer.addView(keyboardOuter)
+
+        setResizeHandlesVisible(false)
+        applyKeyboardSizing()
+
         RemoteStatusHelper.refreshStatusAsync(this)
-        return keyboardView
+        return rootContainer
+    }
+
+    // ---------- ساخت نوار کنترل بالا (تمام / جابجایی / بازنشانی)، دقیقاً شبیه حالت کیبورد کوچیک شیائومی ----------
+    private fun buildControlRow(): LinearLayout {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.parseColor("#151515"))
+            setPadding(dp(12f), dp(8f), dp(12f), dp(8f))
+        }
+
+        val doneBtn = TextView(this).apply {
+            text = "تمام"
+            setTextColor(Color.parseColor("#4A90E2"))
+            textSize = 15f
+            setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
+            setOnClickListener { exitResizeMode() }
+        }
+
+        val moveHandle = TextView(this).apply {
+            text = "✥"
+            setTextColor(Color.WHITE)
+            textSize = 18f
+            setPadding(dp(16f), dp(6f), dp(16f), dp(6f))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            gravity = Gravity.CENTER
+        }
+        setupMoveHandleTouch(moveHandle)
+
+        val resetBtn = TextView(this).apply {
+            text = "بازنشانی"
+            setTextColor(Color.parseColor("#4A90E2"))
+            textSize = 15f
+            setPadding(dp(10f), dp(6f), dp(10f), dp(6f))
+            setOnClickListener {
+                PrefsHelper.resetKeyboardSizing(this@MyInputMethodService)
+                applyKeyboardSizing()
+                Toast.makeText(this@MyInputMethodService, "سایز کیبورد به حالت پیش‌فرض برگشت", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        row.addView(doneBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        row.addView(moveHandle)
+        row.addView(resetBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        return row
+    }
+
+    private fun buildSideHandle(): View {
+        return View(this).apply {
+            setBackgroundColor(Color.parseColor("#AA4A90E2"))
+            visibility = View.GONE
+        }
+    }
+
+    private fun buildBottomHandle(): View {
+        return View(this).apply {
+            setBackgroundColor(Color.parseColor("#AA4A90E2"))
+            visibility = View.GONE
+        }
+    }
+
+    private fun setResizeHandlesVisible(visible: Boolean) {
+        val v = if (visible) View.VISIBLE else View.GONE
+        leftHandle.visibility = v
+        rightHandle.visibility = v
+        bottomHandle.visibility = v
+    }
+
+    // ---------- اعمالِ سایز/موقعیتِ ذخیره‌شده روی قابِ کیبورد ----------
+    private fun applyKeyboardSizing() {
+        val dm = resources.displayMetrics
+        val widthScale = PrefsHelper.getKeyboardWidthScale(this).coerceIn(0.4f, 1f)
+        val leftFraction = PrefsHelper.getKeyboardLeftMarginFraction(this).coerceIn(0f, 1f)
+        val cardWidth = (dm.widthPixels * widthScale).toInt().coerceAtLeast(dp(160f))
+        val slack = (dm.widthPixels - cardWidth).coerceAtLeast(0)
+        val leftMargin = (slack * leftFraction).toInt()
+
+        val lp = FrameLayout.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+        lp.leftMargin = leftMargin
+        keyboardCard.layoutParams = lp
+        keyboardCard.requestLayout()
+        keyboardView.requestLayout()
+    }
+
+    // ---------- حالت تغییرِ سایزِ کلِ کیبورد (با زدنِ آیکون ▦ تو نوار بالای کیبورد باز/بسته می‌شه) ----------
+    override fun onToggleResizeMode() {
+        if (resizeModeOn) exitResizeMode() else enterResizeMode()
+    }
+
+    private fun enterResizeMode() {
+        resizeModeOn = true
+        controlRow.visibility = View.VISIBLE
+        setResizeHandlesVisible(true)
+    }
+
+    private fun exitResizeMode() {
+        resizeModeOn = false
+        controlRow.visibility = View.GONE
+        setResizeHandlesVisible(false)
+    }
+
+    // ---------- کشیدنِ دستگیره‌ی وسطِ نوار کنترل برای جابجایی کل کیبورد به چپ/راست ----------
+    private fun setupMoveHandleTouch(handle: View) {
+        var startRawX = 0f
+        var startLeftMargin = 0
+        var cardWidth = 0
+
+        handle.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startRawX = event.rawX
+                    startLeftMargin = (keyboardCard.layoutParams as FrameLayout.LayoutParams).leftMargin
+                    cardWidth = keyboardCard.width.takeIf { it > 0 } ?: keyboardCard.layoutParams.width
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = (event.rawX - startRawX).toInt()
+                    val screenWidth = resources.displayMetrics.widthPixels
+                    val maxMargin = (screenWidth - cardWidth).coerceAtLeast(0)
+                    val newMargin = (startLeftMargin + dx).coerceIn(0, maxMargin)
+                    val lp = keyboardCard.layoutParams as FrameLayout.LayoutParams
+                    lp.leftMargin = newMargin
+                    keyboardCard.layoutParams = lp
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    persistCurrentCardBounds()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    // ---------- کشیدنِ دستگیره‌های کناری (تغییر عرض، شبیه کراپ‌کردن از هر طرف) ----------
+    private fun setupSideHandleTouch(handle: View, isLeftSide: Boolean) {
+        var startRawX = 0f
+        var startWidth = 0
+        var startLeftMargin = 0
+
+        handle.setOnTouchListener { _, event ->
+            val screenWidth = resources.displayMetrics.widthPixels
+            val minWidth = (screenWidth * 0.4f).toInt()
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startRawX = event.rawX
+                    startWidth = keyboardCard.width.takeIf { it > 0 } ?: keyboardCard.layoutParams.width
+                    startLeftMargin = (keyboardCard.layoutParams as FrameLayout.LayoutParams).leftMargin
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = (event.rawX - startRawX).toInt()
+                    val lp = keyboardCard.layoutParams as FrameLayout.LayoutParams
+                    if (isLeftSide) {
+                        // لبه‌ی راست ثابت می‌مونه؛ کشیدنِ دستگیره‌ی چپ عرض و حاشیه‌ی چپ رو با هم عوض می‌کنه
+                        val rightEdge = startLeftMargin + startWidth
+                        val newWidth = (startWidth - dx).coerceIn(minWidth, screenWidth)
+                        val newMargin = (rightEdge - newWidth).coerceIn(0, screenWidth - newWidth)
+                        lp.width = newWidth
+                        lp.leftMargin = newMargin
+                    } else {
+                        // لبه‌ی چپ ثابت می‌مونه؛ کشیدنِ دستگیره‌ی راست فقط عرض رو عوض می‌کنه
+                        val maxWidth = screenWidth - startLeftMargin
+                        val newWidth = (startWidth + dx).coerceIn(minWidth, maxWidth)
+                        lp.width = newWidth
+                    }
+                    keyboardCard.layoutParams = lp
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    persistCurrentCardBounds()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    // ---------- کشیدنِ دستگیره‌ی پایین (تغییر ارتفاع کل کیبورد) ----------
+    private fun setupBottomHandleTouch(handle: View) {
+        var startRawY = 0f
+        var startScale = 1f
+
+        handle.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startRawY = event.rawY
+                    startScale = PrefsHelper.getKeyboardHeightScale(this)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = event.rawY - startRawY
+                    val refHeight = dp(230f).toFloat()
+                    val newScale = (startScale + dy / refHeight).coerceIn(0.6f, 1.6f)
+                    PrefsHelper.setKeyboardHeightScale(this, newScale)
+                    keyboardView.requestLayout()
+                    keyboardCard.requestLayout()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> true
+                else -> false
+            }
+        }
+    }
+
+    private fun persistCurrentCardBounds() {
+        val dm = resources.displayMetrics
+        val lp = keyboardCard.layoutParams as FrameLayout.LayoutParams
+        val widthScale = (lp.width.toFloat() / dm.widthPixels).coerceIn(0.4f, 1f)
+        val slack = (dm.widthPixels - lp.width).coerceAtLeast(0)
+        val leftFraction = if (slack > 0) (lp.leftMargin.toFloat() / slack).coerceIn(0f, 1f) else 0.5f
+        PrefsHelper.setKeyboardWidthScale(this, widthScale)
+        PrefsHelper.setKeyboardLeftMarginFraction(this, leftFraction)
     }
 
     override fun onEvaluateFullscreenMode(): Boolean {
@@ -33,6 +299,9 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         keyboardView.refreshBackground()
+        setupSideHandleTouch(leftHandle, isLeftSide = true)
+        setupSideHandleTouch(rightHandle, isLeftSide = false)
+        setupBottomHandleTouch(bottomHandle)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
