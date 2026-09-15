@@ -420,12 +420,16 @@ class KeyboardEditorActivity : AppCompatActivity() {
         val overlay = FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             setBackgroundColor(Color.parseColor("#CC000000"))
+            isClickable = true
+            isFocusable = true
+            setOnTouchListener { _, _ -> true } // نذاره لمس از زیرِ کارت رد بشه و بره رو کلیدهای کیبورد پشتش
         }
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#1C1C1E"))
             setPadding((16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt())
+            isClickable = true
         }
         val cardLp = FrameLayout.LayoutParams((300 * density).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
         cardLp.gravity = Gravity.CENTER
@@ -434,9 +438,17 @@ class KeyboardEditorActivity : AppCompatActivity() {
             text = "ویرایش «${target.displayLabel}»"
             setTextColor(Color.WHITE)
             textSize = 15f
-            setPadding(0, 0, 0, (10 * density).toInt())
+            setPadding(0, 0, 0, (4 * density).toInt())
         }
         card.addView(title)
+
+        val hint = TextView(this).apply {
+            text = "مربعِ آبی رو از گوشه‌ی پایین-راستش (نقطه‌ی سفید) بکش"
+            setTextColor(Color.parseColor("#8A8A8E"))
+            textSize = 11f
+            setPadding(0, 0, 0, (10 * density).toInt())
+        }
+        card.addView(hint)
 
         val canvasWpx = (240 * density).toInt()
         val canvasHpx = (150 * density).toInt()
@@ -477,17 +489,24 @@ class KeyboardEditorActivity : AppCompatActivity() {
         }
         box.addView(boxLabel)
 
-        val boxLp = FrameLayout.LayoutParams(
-            weightToPx(curWidthWeight, widthMin, widthMax, maxBoxWpx).toInt(),
-            weightToPx(curHeightWeight, heightMin, heightMax, maxBoxHpx).toInt()
-        )
+        var curWidthPx = weightToPx(curWidthWeight, widthMin, widthMax, maxBoxWpx)
+        var curHeightPx = weightToPx(curHeightWeight, heightMin, heightMax, maxBoxHpx)
+
+        val boxLp = FrameLayout.LayoutParams(curWidthPx.toInt(), curHeightPx.toInt())
         boxLp.gravity = Gravity.TOP or Gravity.START
         boxLp.leftMargin = (10 * density).toInt()
         boxLp.topMargin = (10 * density).toInt()
         canvas.addView(box, boxLp)
 
-        val cornerHandle = View(this).apply { setBackgroundColor(Color.WHITE) }
-        box.addView(cornerHandle, FrameLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).also {
+        // دستگیره‌ی بزرگ و واضح، گوشه‌ی پایین-راستِ جعبه (خودِ جعبه همون شکلِ کلیده)
+        val cornerHandle = FrameLayout(this).apply {
+            setBackgroundColor(Color.WHITE)
+        }
+        val cornerMark = View(this).apply { setBackgroundColor(Color.parseColor("#4A90E2")) }
+        cornerHandle.addView(cornerMark, FrameLayout.LayoutParams((14 * density).toInt(), (14 * density).toInt()).also {
+            it.gravity = Gravity.CENTER
+        })
+        box.addView(cornerHandle, FrameLayout.LayoutParams((34 * density).toInt(), (34 * density).toInt()).also {
             it.gravity = Gravity.BOTTOM or Gravity.END
         })
 
@@ -519,14 +538,14 @@ class KeyboardEditorActivity : AppCompatActivity() {
                     lastRawX = event.rawX
                     lastRawY = event.rawY
 
-                    val newWpx = (box.width + dx).coerceIn(minBoxPx, maxBoxWpx)
-                    val newHpx = (box.height + dy).coerceIn(minBoxPx, maxBoxHpx)
-                    curWidthWeight = pxToWeight(newWpx, widthMin, widthMax, maxBoxWpx)
-                    curHeightWeight = pxToWeight(newHpx, heightMin, heightMax, maxBoxHpx)
+                    curWidthPx = (curWidthPx + dx).coerceIn(minBoxPx, maxBoxWpx)
+                    curHeightPx = (curHeightPx + dy).coerceIn(minBoxPx, maxBoxHpx)
+                    curWidthWeight = pxToWeight(curWidthPx, widthMin, widthMax, maxBoxWpx)
+                    curHeightWeight = pxToWeight(curHeightPx, heightMin, heightMax, maxBoxHpx)
 
                     val lp = box.layoutParams as FrameLayout.LayoutParams
-                    lp.width = newWpx.toInt()
-                    lp.height = newHpx.toInt()
+                    lp.width = curWidthPx.toInt()
+                    lp.height = curHeightPx.toInt()
                     box.layoutParams = lp
                     updateReadout()
                     true
