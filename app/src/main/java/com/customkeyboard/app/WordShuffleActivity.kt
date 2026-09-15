@@ -240,15 +240,55 @@ class WordShuffleActivity : AppCompatActivity() {
 
     private fun showEditWordListDialog(name: String, container: LinearLayout) {
         val words = PrefsHelper.getWordList(this, name)
+
+        val dialogLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+        }
+
+        val searchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        val edtSearch = EditText(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            hint = "جستجوی کلمه..."
+        }
         val edt = EditText(this).apply {
             setText(words.joinToString("\n"))
             minLines = 8
             gravity = android.view.Gravity.TOP or android.view.Gravity.START
             hint = "هر کلمه تو یه خط..."
         }
+        val btnSearch = Button(this).apply {
+            text = "جستجو"
+            textSize = 12f
+            setOnClickListener {
+                val query = edtSearch.text.toString().trim()
+                if (query.isEmpty()) return@setOnClickListener
+                val currentWords = edt.text.toString()
+                    .split("\n")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                val (matched, rest) = currentWords.partition { it.contains(query, ignoreCase = true) }
+                if (matched.isEmpty()) {
+                    Toast.makeText(this@WordShuffleActivity, "چیزی پیدا نشد", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                edt.setText((matched + rest).joinToString("\n"))
+                edt.setSelection(0)
+            }
+        }
+        searchRow.addView(edtSearch)
+        searchRow.addView(btnSearch)
+
+        dialogLayout.addView(searchRow)
+        dialogLayout.addView(edt)
+
         AlertDialog.Builder(this)
             .setTitle("ویرایش لیست \"$name\"")
-            .setView(edt)
+            .setView(dialogLayout)
             .setPositiveButton("ذخیره") { _, _ ->
                 val newWords = edt.text.toString()
                     .split("\n")
