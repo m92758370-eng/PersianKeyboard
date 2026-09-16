@@ -20,8 +20,6 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     private lateinit var rootContainer: LinearLayout
     private lateinit var controlRow: LinearLayout
-    private lateinit var suggestionBar: LinearLayout
-    private lateinit var suggestionButtons: List<TextView>
     private lateinit var keyboardOuter: FrameLayout
     private lateinit var keyboardCard: FrameLayout
     private lateinit var keyboardView: CustomKeyboardView
@@ -30,6 +28,8 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     private lateinit var topHandle: View
     private lateinit var bottomHandle: View
     private var resizeModeOn = false
+    // آخرین پیشوندی که پیشنهادها براش حساب شدن؛ وقتی رو پیشنهاد می‌زنید همینو حذف می‌کنیم
+    private var lastSuggestionPrefix: String = ""
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -75,14 +75,11 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         controlRow = buildControlRow()
         controlRow.visibility = View.GONE
 
-        suggestionBar = buildSuggestionBar()
-
         rootContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         rootContainer.addView(controlRow)
-        rootContainer.addView(suggestionBar)
         rootContainer.addView(keyboardOuter)
 
         setResizeHandlesVisible(false)
@@ -137,34 +134,6 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         return row
     }
 
-    // ---------- نوار کلماتِ پیشنهادی (خودآموز، بدون هیچ لیستِ از پیش آماده‌ای) ----------
-    private fun buildSuggestionBar(): LinearLayout {
-        val bar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.parseColor("#1C1C1E"))
-            visibility = View.GONE
-        }
-        val buttons = (0 until 3).map { index ->
-            TextView(this).apply {
-                setTextColor(Color.WHITE)
-                textSize = 15f
-                gravity = Gravity.CENTER
-                setPadding(dp(6f), dp(11f), dp(6f), dp(11f))
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                visibility = View.GONE
-            }
-        }
-        buttons.forEachIndexed { index, tv ->
-            bar.addView(tv)
-            if (index < buttons.size - 1) {
-                val divider = View(this).apply { setBackgroundColor(Color.parseColor("#3A3A3C")) }
-                bar.addView(divider, LinearLayout.LayoutParams(dp(1f), ViewGroup.LayoutParams.MATCH_PARENT))
-            }
-        }
-        suggestionButtons = buttons
-        return bar
-    }
-
     // نویسه‌های فارسی/عربیِ بلافاصله قبل از مکان‌نما رو به‌عنوان «کلمه‌ی در حالِ تایپ» برمی‌گردونه
     private fun currentWordPrefix(): String {
         val before = currentInputConnection?.getTextBeforeCursor(30, 0)?.toString() ?: return ""
@@ -172,27 +141,19 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         return match?.value ?: ""
     }
 
+    // پیشنهادها رو حساب می‌کنه و مستقیم به خودِ کیبورد می‌ده تا همون نوار بالای ۴۲dp رو
+    // به‌جای ۶ آیکونِ عادی، با میکروفون+پیشنهادها+گرید نشون بده (نه یه ردیفِ جدا)
     private fun updateSuggestions() {
-        if (!::suggestionBar.isInitialized) return
+        if (!::keyboardView.isInitialized) return
         val prefix = currentWordPrefix()
+        lastSuggestionPrefix = prefix
         val suggestions = if (prefix.isNotEmpty()) WordDictionary.getSuggestions(this, prefix, 3) else emptyList()
-        var anyVisible = false
-        suggestionButtons.forEachIndexed { index, tv ->
-            val word = suggestions.getOrNull(index)
-            if (word != null) {
-                tv.text = word
-                tv.visibility = View.VISIBLE
-                tv.setOnClickListener { applySuggestion(prefix, word) }
-                anyVisible = true
-            } else {
-                tv.visibility = View.GONE
-            }
-        }
-        suggestionBar.visibility = if (anyVisible) View.VISIBLE else View.GONE
+        keyboardView.setSuggestions(suggestions)
     }
 
-    private fun applySuggestion(prefix: String, word: String) {
-        currentInputConnection?.deleteSurroundingText(prefix.length, 0)
+    override fun onSuggestionTap(word: String) {
+        if (!isAllowed()) return
+        currentInputConnection?.deleteSurroundingText(lastSuggestionPrefix.length, 0)
         currentInputConnection?.commitText("$word ", 1)
         WordDictionary.recordTyped(this, word)
         updateSuggestions()
@@ -427,6 +388,9 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         pauseAutoType()
+        if (::keyboardView.isInitialized) {
+            keyboardView.setSuggestions(emptyList())
+        }
     }
 
     private fun isAllowed(): Boolean {
