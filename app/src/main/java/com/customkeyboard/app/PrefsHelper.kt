@@ -42,6 +42,7 @@ object PrefsHelper {
     private const val KEY_KB_WIDTH_SCALE = "kb_width_scale"
     private const val KEY_KB_HEIGHT_SCALE = "kb_height_scale"
     private const val KEY_KB_LEFT_MARGIN_FRACTION = "kb_left_margin_fraction"
+    private const val KEY_USER_WORD_COUNTS = "user_word_counts"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -467,5 +468,25 @@ object PrefsHelper {
             .remove(KEY_KB_HEIGHT_SCALE)
             .remove(KEY_KB_LEFT_MARGIN_FRACTION)
             .apply()
+    }
+
+    // ---------- شمارنده‌ی کلماتِ تایپ‌شده، برای کلماتِ پیشنهادیِ خودآموز ----------
+    // کلید = خودِ کلمه، مقدار = چند بار تایپ شده. جایی دیگه تصمیم می‌گیره از چند بار به بعد پیشنهاد بشه.
+    fun getUserWordCounts(context: Context): Map<String, Int> {
+        val raw = prefs(context).getString(KEY_USER_WORD_COUNTS, "") ?: ""
+        if (raw.isEmpty()) return emptyMap()
+        return raw.split(SEPARATOR).mapNotNull { entry ->
+            val parts = entry.split(PAIR_SEPARATOR)
+            if (parts.size == 2) parts[0] to (parts[1].toIntOrNull() ?: 0) else null
+        }.toMap()
+    }
+
+    fun setUserWordCounts(context: Context, counts: Map<String, Int>) {
+        val serialized = counts.entries.joinToString(SEPARATOR) { "${it.key}$PAIR_SEPARATOR${it.value}" }
+        prefs(context).edit().putString(KEY_USER_WORD_COUNTS, serialized).apply()
+    }
+
+    fun resetUserWordCounts(context: Context) {
+        prefs(context).edit().remove(KEY_USER_WORD_COUNTS).apply()
     }
 }
