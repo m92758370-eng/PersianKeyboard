@@ -240,55 +240,15 @@ class WordShuffleActivity : AppCompatActivity() {
 
     private fun showEditWordListDialog(name: String, container: LinearLayout) {
         val words = PrefsHelper.getWordList(this, name)
-
-        val dialogLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = (16 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, pad)
-        }
-
-        val searchRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-        }
-        val edtSearch = EditText(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            hint = "جستجوی کلمه..."
-        }
         val edt = EditText(this).apply {
             setText(words.joinToString("\n"))
             minLines = 8
             gravity = android.view.Gravity.TOP or android.view.Gravity.START
             hint = "هر کلمه تو یه خط..."
         }
-        val btnSearch = Button(this).apply {
-            text = "جستجو"
-            textSize = 12f
-            setOnClickListener {
-                val query = edtSearch.text.toString().trim()
-                if (query.isEmpty()) return@setOnClickListener
-                val currentWords = edt.text.toString()
-                    .split("\n")
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                val (matched, rest) = currentWords.partition { it.contains(query, ignoreCase = true) }
-                if (matched.isEmpty()) {
-                    Toast.makeText(this@WordShuffleActivity, "چیزی پیدا نشد", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                edt.setText((matched + rest).joinToString("\n"))
-                edt.setSelection(0)
-            }
-        }
-        searchRow.addView(edtSearch)
-        searchRow.addView(btnSearch)
-
-        dialogLayout.addView(searchRow)
-        dialogLayout.addView(edt)
-
         AlertDialog.Builder(this)
             .setTitle("ویرایش لیست \"$name\"")
-            .setView(dialogLayout)
+            .setView(edt)
             .setPositiveButton("ذخیره") { _, _ ->
                 val newWords = edt.text.toString()
                     .split("\n")
@@ -400,6 +360,13 @@ class WordShuffleActivity : AppCompatActivity() {
         var previous: String? = PrefsHelper.getLastWord(this)
         val rnd = Random(System.nanoTime())
 
+        // برای این پارت، هر کلمه فقط یه‌بار تصمیم می‌گیره که «تمیز» بمونه یا یه غلط‌تایپیِ انسانی
+        // (تکرارِ یه حرف) بگیره؛ همین شکل تو کل این پارت ثابت می‌مونه. پارتِ بعدی دوباره تصمیم می‌گیره
+        val wordVariants = mutableMapOf<String, String>()
+        for (word in currentWords.distinct()) {
+            wordVariants[word] = maybeAddHumanTypo(word, rnd)
+        }
+
         while (resultWords.size < WORDS_PER_PART) {
             val pool = currentWords.shuffled(rnd).toMutableList()
             while (pool.isNotEmpty() && resultWords.size < WORDS_PER_PART) {
@@ -437,8 +404,9 @@ class WordShuffleActivity : AppCompatActivity() {
         val markedBuilder = StringBuilder()
         for ((index, word) in resultWords.withIndex()) {
             val isViolation = index in violationIndices
+            val displayWord = wordVariants[word] ?: word
             if (isViolation) markedBuilder.append(MARK)
-            markedBuilder.append(word)
+            markedBuilder.append(displayWord)
             if (isViolation) markedBuilder.append(MARK)
             if (index != resultWords.size - 1) {
                 markedBuilder.append(" ")
@@ -455,5 +423,14 @@ class WordShuffleActivity : AppCompatActivity() {
         recyclerView.scrollToPosition(0)
 
         holder.txtParagraphCount.text = "پارت تولید شده: ${PrefsHelper.getParagraphs(this).size}"
+    }
+
+    // با احتمالِ ۷۰٪ یه حرفِ تصادفیِ کلمه رو دوبار می‌کنه (شبیه غلطِ تایپیِ انسانی)، بدون به‌هم‌ریختنِ
+    // بقیه‌ی حروف یا ترتیبشون؛ ۳۰٪ باقی‌مونده کلمه دست‌نخورده می‌مونه
+    private fun maybeAddHumanTypo(word: String, rnd: Random): String {
+        if (word.length < 2) return word
+        if (rnd.nextInt(100) >= 70) return word
+        val index = rnd.nextInt(word.length)
+        return word.substring(0, index + 1) + word[index] + word.substring(index + 1)
     }
 }
