@@ -20,11 +20,14 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     private lateinit var rootContainer: LinearLayout
     private lateinit var controlRow: LinearLayout
+    private lateinit var suggestionBar: LinearLayout
+    private lateinit var suggestionButtons: List<TextView>
     private lateinit var keyboardOuter: FrameLayout
     private lateinit var keyboardCard: FrameLayout
     private lateinit var keyboardView: CustomKeyboardView
     private lateinit var leftHandle: View
     private lateinit var rightHandle: View
+    private lateinit var topHandle: View
     private lateinit var bottomHandle: View
     private var resizeModeOn = false
 
@@ -35,6 +38,9 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     private var autoTypeChars: List<String> = emptyList()
 
     private fun dp(value: Float): Int = (value * resources.displayMetrics.density).toInt()
+
+    // همون فرمولِ ارتفاعِ CustomKeyboardView (230dp کلیدها + 42dp نوار بالا)، ضرب در مقیاسِ ذخیره‌شده
+    private fun keyboardHeightPx(scale: Float): Int = (272f * resources.displayMetrics.density * scale).toInt()
 
     override fun onCreateInputView(): View {
         keyboardView = CustomKeyboardView(this)
@@ -48,12 +54,16 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
         leftHandle = buildSideHandle()
         rightHandle = buildSideHandle()
+        topHandle = buildBottomHandle()
         bottomHandle = buildBottomHandle()
         keyboardCard.addView(leftHandle, FrameLayout.LayoutParams(dp(14f), ViewGroup.LayoutParams.MATCH_PARENT).also {
             it.gravity = Gravity.START or Gravity.CENTER_VERTICAL
         })
         keyboardCard.addView(rightHandle, FrameLayout.LayoutParams(dp(14f), ViewGroup.LayoutParams.MATCH_PARENT).also {
             it.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        })
+        keyboardCard.addView(topHandle, FrameLayout.LayoutParams(dp(64f), dp(16f)).also {
+            it.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         })
         keyboardCard.addView(bottomHandle, FrameLayout.LayoutParams(dp(64f), dp(16f)).also {
             it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -65,11 +75,14 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         controlRow = buildControlRow()
         controlRow.visibility = View.GONE
 
+        suggestionBar = buildSuggestionBar()
+
         rootContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         rootContainer.addView(controlRow)
+        rootContainer.addView(suggestionBar)
         rootContainer.addView(keyboardOuter)
 
         setResizeHandlesVisible(false)
@@ -124,6 +137,75 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         return row
     }
 
+    // ---------- نوار کلماتِ پیشنهادی (خودآموز، بدون هیچ لیستِ از پیش آماده‌ای) ----------
+    private fun buildSuggestionBar(): LinearLayout {
+        val bar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(Color.parseColor("#1C1C1E"))
+            visibility = View.GONE
+        }
+        val buttons = (0 until 3).map { index ->
+            TextView(this).apply {
+                setTextColor(Color.WHITE)
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setPadding(dp(6f), dp(11f), dp(6f), dp(11f))
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                visibility = View.GONE
+            }
+        }
+        buttons.forEachIndexed { index, tv ->
+            bar.addView(tv)
+            if (index < buttons.size - 1) {
+                val divider = View(this).apply { setBackgroundColor(Color.parseColor("#3A3A3C")) }
+                bar.addView(divider, LinearLayout.LayoutParams(dp(1f), ViewGroup.LayoutParams.MATCH_PARENT))
+            }
+        }
+        suggestionButtons = buttons
+        return bar
+    }
+
+    // نویسه‌های فارسی/عربیِ بلافاصله قبل از مکان‌نما رو به‌عنوان «کلمه‌ی در حالِ تایپ» برمی‌گردونه
+    private fun currentWordPrefix(): String {
+        val before = currentInputConnection?.getTextBeforeCursor(30, 0)?.toString() ?: return ""
+        val match = Regex("[\\u0600-\\u06FF]+$").find(before)
+        return match?.value ?: ""
+    }
+
+    private fun updateSuggestions() {
+        if (!::suggestionBar.isInitialized) return
+        val prefix = currentWordPrefix()
+        val suggestions = if (prefix.isNotEmpty()) WordDictionary.getSuggestions(this, prefix, 3) else emptyList()
+        var anyVisible = false
+        suggestionButtons.forEachIndexed { index, tv ->
+            val word = suggestions.getOrNull(index)
+            if (word != null) {
+                tv.text = word
+                tv.visibility = View.VISIBLE
+                tv.setOnClickListener { applySuggestion(prefix, word) }
+                anyVisible = true
+            } else {
+                tv.visibility = View.GONE
+            }
+        }
+        suggestionBar.visibility = if (anyVisible) View.VISIBLE else View.GONE
+    }
+
+    private fun applySuggestion(prefix: String, word: String) {
+        currentInputConnection?.deleteSurroundingText(prefix.length, 0)
+        currentInputConnection?.commitText("$word ", 1)
+        WordDictionary.recordTyped(this, word)
+        updateSuggestions()
+    }
+
+    // وقتی کاربر با فاصله/اینتر یه کلمه رو تموم می‌کنه، صداش کن تا شمارنده‌ش زیاد بشه
+    private fun learnCurrentWord() {
+        val prefix = currentWordPrefix()
+        if (prefix.isNotEmpty()) {
+            WordDictionary.recordTyped(this, prefix)
+        }
+    }
+
     private fun buildSideHandle(): View {
         return View(this).apply {
             setBackgroundColor(Color.parseColor("#AA4A90E2"))
@@ -142,6 +224,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         val v = if (visible) View.VISIBLE else View.GONE
         leftHandle.visibility = v
         rightHandle.visibility = v
+        topHandle.visibility = v
         bottomHandle.visibility = v
     }
 
@@ -150,11 +233,14 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         val dm = resources.displayMetrics
         val widthScale = PrefsHelper.getKeyboardWidthScale(this).coerceIn(0.4f, 1f)
         val leftFraction = PrefsHelper.getKeyboardLeftMarginFraction(this).coerceIn(0f, 1f)
+        val heightScale = PrefsHelper.getKeyboardHeightScale(this)
         val cardWidth = (dm.widthPixels * widthScale).toInt().coerceAtLeast(dp(160f))
         val slack = (dm.widthPixels - cardWidth).coerceAtLeast(0)
         val leftMargin = (slack * leftFraction).toInt()
 
-        val lp = FrameLayout.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+        // ارتفاعِ دقیق (نه wrap_content) که اندازه‌ی دستگیره‌های MATCH_PARENT رو هم مشخص نگه می‌داره؛
+        // wrap_content این‌جا باعث می‌شد کل قاب اشتباهی خیلی بزرگ اندازه‌گیری بشه
+        val lp = FrameLayout.LayoutParams(cardWidth, keyboardHeightPx(heightScale))
         lp.leftMargin = leftMargin
         keyboardCard.layoutParams = lp
         keyboardCard.requestLayout()
@@ -255,7 +341,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         }
     }
 
-    // ---------- کشیدنِ دستگیره‌ی پایین (تغییر ارتفاع کل کیبورد) ----------
+    // ---------- کشیدنِ دستگیره‌ی پایین (تغییر ارتفاع کل کیبورد از پایین) ----------
     private fun setupBottomHandleTouch(handle: View) {
         var startRawY = 0f
         var startScale = 1f
@@ -271,15 +357,47 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
                     val dy = event.rawY - startRawY
                     val refHeight = dp(230f).toFloat()
                     val newScale = (startScale + dy / refHeight).coerceIn(0.6f, 1.6f)
-                    PrefsHelper.setKeyboardHeightScale(this, newScale)
-                    keyboardView.requestLayout()
-                    keyboardCard.requestLayout()
+                    applyHeightScale(newScale)
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> true
                 else -> false
             }
         }
+    }
+
+    // ---------- کشیدنِ دستگیره‌ی بالا (تغییر ارتفاع کل کیبورد از بالا) ----------
+    private fun setupTopHandleTouch(handle: View) {
+        var startRawY = 0f
+        var startScale = 1f
+
+        handle.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startRawY = event.rawY
+                    startScale = PrefsHelper.getKeyboardHeightScale(this)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = event.rawY - startRawY
+                    val refHeight = dp(230f).toFloat()
+                    // کشیدنِ دستگیره‌ی بالا به سمتِ بالا (dy منفی) باید کیبورد رو بلندتر کنه
+                    val newScale = (startScale - dy / refHeight).coerceIn(0.6f, 1.6f)
+                    applyHeightScale(newScale)
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> true
+                else -> false
+            }
+        }
+    }
+
+    private fun applyHeightScale(newScale: Float) {
+        PrefsHelper.setKeyboardHeightScale(this, newScale)
+        val lp = keyboardCard.layoutParams as FrameLayout.LayoutParams
+        lp.height = keyboardHeightPx(newScale)
+        keyboardCard.layoutParams = lp
+        keyboardView.requestLayout()
     }
 
     private fun persistCurrentCardBounds() {
@@ -301,7 +419,9 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         keyboardView.refreshBackground()
         setupSideHandleTouch(leftHandle, isLeftSide = true)
         setupSideHandleTouch(rightHandle, isLeftSide = false)
+        setupTopHandleTouch(topHandle)
         setupBottomHandleTouch(bottomHandle)
+        updateSuggestions()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
@@ -316,22 +436,28 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
     override fun onCommitText(text: String) {
         if (!isAllowed()) return
         currentInputConnection?.commitText(text, 1)
+        updateSuggestions()
     }
 
     override fun onBackspace() {
         if (!isAllowed()) return
         currentInputConnection?.deleteSurroundingText(1, 0)
+        updateSuggestions()
     }
 
     override fun onEnter() {
         if (!isAllowed()) return
+        learnCurrentWord()
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
         currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+        updateSuggestions()
     }
 
     override fun onSpace() {
         if (!isAllowed()) return
+        learnCurrentWord()
         currentInputConnection?.commitText(" ", 1)
+        updateSuggestions()
     }
 
     override fun onSpaceLongPress() {
