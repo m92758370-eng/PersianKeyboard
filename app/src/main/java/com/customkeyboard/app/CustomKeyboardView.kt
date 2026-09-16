@@ -937,11 +937,14 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawGearIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val rOuter = rect.height() * 0.26f
-        val rBody = rOuter * 0.66f
-        val toothW = rOuter * 0.46f
-        val toothH = rOuter * 0.5f
-        val holeR = rOuter * 0.22f
+        val rOuter = rect.height() * 0.27f
+        val toothCount = 8
+        val rTip = rOuter.toDouble()
+        val rBody = (rOuter * 0.68f).toDouble()
+        val holeR = rOuter * 0.32f
+        val toothTipHalfDeg = 9.0
+        val toothBaseHalfDeg = 15.0
+        val stepDeg = 360.0 / toothCount
 
         val fillPaint = Paint().apply {
             color = smileyDotPaint.color
@@ -949,20 +952,40 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             style = Paint.Style.FILL
         }
 
-        canvas.drawCircle(cx, cy, rBody, fillPaint)
-
-        for (i in 0 until 6) {
-            canvas.save()
-            canvas.rotate(i * 60f, cx, cy)
-            val toothRect = RectF(
-                cx - toothW / 2,
-                cy - rBody - toothH * 0.72f,
-                cx + toothW / 2,
-                cy - rBody + toothH * 0.28f
-            )
-            canvas.drawRoundRect(toothRect, toothW * 0.4f, toothW * 0.4f, fillPaint)
-            canvas.restore()
+        fun pointAt(angleDeg: Double, r: Double): FloatArray {
+            val rad = Math.toRadians(angleDeg)
+            return floatArrayOf((cx + r * Math.cos(rad)).toFloat(), (cy + r * Math.sin(rad)).toFloat())
         }
+
+        // یه مسیرِ واحد برای کلِ دورِ دنده‌ها: هر دندونه ذوزنقه‌ایه (پایه‌ی پهن‌تر، نوکِ باریک‌تر)
+        // و بینِ دو دندونه‌ی پیاپی، با یه کمانِ روی شعاعِ بدنه گودیِ گرد ایجاد می‌کنیم
+        val path = Path()
+        val innerOval = RectF(
+            (cx - rBody).toFloat(), (cy - rBody).toFloat(),
+            (cx + rBody).toFloat(), (cy + rBody).toFloat()
+        )
+        for (i in 0 until toothCount) {
+            val center = i * stepDeg
+            val baseStart = center - toothBaseHalfDeg
+            val tipStart = center - toothTipHalfDeg
+            val tipEnd = center + toothTipHalfDeg
+            val baseEnd = center + toothBaseHalfDeg
+
+            val p1 = pointAt(baseStart, rBody)
+            val p2 = pointAt(tipStart, rTip)
+            val p3 = pointAt(tipEnd, rTip)
+            val p4 = pointAt(baseEnd, rBody)
+
+            if (i == 0) path.moveTo(p1[0], p1[1]) else path.lineTo(p1[0], p1[1])
+            path.lineTo(p2[0], p2[1])
+            path.lineTo(p3[0], p3[1])
+            path.lineTo(p4[0], p4[1])
+
+            val nextBaseStart = center + stepDeg - toothBaseHalfDeg
+            path.arcTo(innerOval, baseEnd.toFloat(), (nextBaseStart - baseEnd).toFloat())
+        }
+        path.close()
+        canvas.drawPath(path, fillPaint)
 
         val holePaint = Paint().apply {
             color = fallbackBgColor
