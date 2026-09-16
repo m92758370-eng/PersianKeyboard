@@ -868,33 +868,33 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawMicIcon(canvas: Canvas, rect: RectF) {
-        val strokePaint = Paint(smileyStrokePaint).apply {
-            strokeWidth = 1.7f * density
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
         val cx = rect.centerX()
         val cy = rect.centerY()
         val h = rect.height() * 0.36f // واحدِ اندازه: نصفِ ارتفاعِ آیکون
 
-        // بدنه‌ی کپسولی (سرِ میکروفون) — باریک‌تر و بلندتر، شبیه شکلِ واقعیِ میکروفون
+        val strokePaint = Paint(smileyStrokePaint).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            strokeWidth = h * 0.17f // ضخیم‌تر و متناسب با اندازه‌ی آیکون (به‌جای ضخامتِ ثابتِ قبلی)
+        }
+
+        // بدنه‌ی کپسولی (سرِ میکروفون)
         val bodyW = h * 0.62f
         val bodyTop = cy - h
         val bodyBottom = cy + h * 0.05f
         val bodyRect = RectF(cx - bodyW / 2f, bodyTop, cx + bodyW / 2f, bodyBottom)
         canvas.drawRoundRect(bodyRect, bodyW / 2f, bodyW / 2f, strokePaint)
 
-        // حلقه‌ی نگه‌دارنده: یه "U" پهن‌تر از بدنه که دورِ پایینش رو می‌گیره
-        val standHalfW = h * 0.5f
-        val standTop = cy - h * 0.25f
-        val standBottom = cy + h * 0.55f
+        // حلقه‌ی نگه‌دارنده: بزرگ‌تر و نزدیک‌تر به بدنه (به‌جای فاصله‌ی زیاد قبلی)
+        val standHalfW = h * 0.67f
+        val standTop = cy - h * 0.63f
+        val standBottom = cy + h * 0.52f
         val standRect = RectF(cx - standHalfW, standTop, cx + standHalfW, standBottom)
         canvas.drawArc(standRect, 0f, 180f, false, strokePaint)
 
-        // ساقه‌ی عمودی زیرِ حلقه، ختم به یه خطِ افقیِ پایه
+        // ساقه‌ی عمودی با نوکِ گرد — بدونِ خطِ افقیِ پایه (طبقِ نمونه)
         canvas.drawLine(cx, standBottom, cx, cy + h * 0.85f, strokePaint)
-        canvas.drawLine(cx - h * 0.32f, cy + h * 0.85f, cx + h * 0.32f, cy + h * 0.85f, strokePaint)
     }
 
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
