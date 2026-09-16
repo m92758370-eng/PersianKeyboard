@@ -953,12 +953,14 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawGearIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val rOuter = rect.height() * 0.27f
-        val rBody = rOuter * 0.6f
-        val toothW = rOuter * 0.34f
-        val toothH = rOuter * 0.4f
-        val holeR = rOuter * 0.3f
-        val toothCount = 8
+        val rOuter = rect.height() * 0.27f // شعاعِ نوکِ پره‌ها تا مرکز
+
+        val rBody = rOuter * 0.725f          // شعاعِ حلقه‌ی ضخیمِ پشتِ پره‌ها
+        val holeR = rOuter * 0.30f           // شعاعِ حفره‌ی وسط
+        val toothInnerR = rOuter * 0.575f    // از کجای شعاع، پره شروع می‌شه (داخلِ حلقه، برای اتصالِ بی‌درز)
+        val toothLen = rOuter * 0.425f       // طولِ پره (نوکش دقیقاً رو rOuter می‌شینه)
+        val toothHalfW = rOuter * 0.25f      // نصفِ عرضِ پره
+        val cornerRx = rOuter * 0.0875f      // گردیِ ملایمِ گوشه‌های پره
 
         val fillPaint = Paint().apply {
             color = smileyDotPaint.color
@@ -968,16 +970,18 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         canvas.drawCircle(cx, cy, rBody, fillPaint)
 
-        for (i in 0 until toothCount) {
+        // ۶ پره، یکی‌شون دقیقاً رو به بالا؛ بقیه هر ۶۰ درجه فاصله دارن
+        val angles = floatArrayOf(-90f, -30f, 30f, 90f, 150f, 210f)
+        for (angle in angles) {
             canvas.save()
-            canvas.rotate(i * (360f / toothCount), cx, cy)
+            canvas.rotate(angle, cx, cy)
             val toothRect = RectF(
-                cx - toothW / 2f,
-                cy - rBody - toothH * 0.78f,
-                cx + toothW / 2f,
-                cy - rBody + toothH * 0.32f
+                cx + toothInnerR,
+                cy - toothHalfW,
+                cx + toothInnerR + toothLen,
+                cy + toothHalfW
             )
-            canvas.drawRoundRect(toothRect, toothW * 0.3f, toothW * 0.3f, fillPaint)
+            canvas.drawRoundRect(toothRect, cornerRx, cornerRx, fillPaint)
             canvas.restore()
         }
 
