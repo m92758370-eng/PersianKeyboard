@@ -32,11 +32,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         fun onWordShuffleButton()
         fun onSettingsButton()
         fun onToggleResizeMode()
+        fun onSuggestionTap(word: String)
     }
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, ZWNJ, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, ZWNJ, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID, SUGGESTION }
     private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS, EMOJI }
 
     private data class KeyRect(
@@ -56,6 +57,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private var usePersian = true
     private val keys = mutableListOf<KeyRect>()
     private var mode = KeyboardMode.LETTERS
+    // کلماتِ پیشنهادیِ فعلی؛ وقتی خالی نیست، همین ۴۲dp نوار بالا به‌جای ۶ آیکونِ عادی، این‌ها رو نشون می‌ده
+    private var currentSuggestions: List<String> = emptyList()
+
+    /** از سرویسِ کیبورد صدا زده می‌شه تا نوار بالا بینِ حالتِ عادی و حالتِ پیشنهادها سوییچ کنه. */
+    fun setSuggestions(suggestions: List<String>) {
+        currentSuggestions = suggestions
+        if (width > 0 && height > 0) {
+            rebuildKeys(width, height)
+            invalidate()
+        }
+    }
 
     private val keyPaint = Paint().apply {
         color = Color.parseColor("#992A2A2A")
@@ -319,21 +331,50 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val bottomRowHeightWeight = PrefsHelper.getBottomRowHeightWeight(context)
 
         val toolbarHeight = TOOLBAR_HEIGHT_DP * density * toolbarHeightWeight
-        val toolbarWeights = toolbarKeyIds.map { specialWeights[it] ?: 1f }
-        val toolbarWeightSum = toolbarWeights.sum().takeIf { it > 0f } ?: 1f
-        var leftTb = 0f
-        for (i in 0 until 6) {
-            val right = leftTb + w * (toolbarWeights[i] / toolbarWeightSum)
-            val type = when (i) {
-                0 -> KeyType.TOOLBAR_MIC
-                1 -> KeyType.TOOLBAR_TRANSLATE
-                2 -> KeyType.TOOLBAR_SETTINGS
-                3 -> KeyType.TOOLBAR_EMOJI
-                4 -> KeyType.TOOLBAR_CLIPBOARD
-                else -> KeyType.TOOLBAR_GRID
-            }
-            keys.add(KeyRect("", RectF(leftTb, 0f, right, toolbarHeight), type))
+
+        if (currentSuggestions.isNotEmpty()) {
+            // حالتِ پیشنهادها: میکروفون + حداکثر ۳ پیشنهاد + گرید، دقیقاً تو همون ردیفِ نوار بالا
+            // (به‌جای ترجمه/تنظیمات/ایموجی/کلیپ‌بورد که موقتاً کنار می‌رن)
+            val micWeight = specialWeights["toolbar_mic"] ?: 1f
+            val gridWeight = specialWeights["toolbar_grid"] ?: 1f
+            val middleWeight = (specialWeights["toolbar_translate"] ?: 1f) +
+                (specialWeights["toolbar_settings"] ?: 1f) +
+                (specialWeights["toolbar_emoji"] ?: 1f) +
+                (specialWeights["toolbar_clipboard"] ?: 1f)
+            val suggestionCount = currentSuggestions.size.coerceAtMost(3)
+            val perSuggestionWeight = middleWeight / suggestionCount
+            val weights = mutableListOf(micWeight)
+            repeat(suggestionCount) { weights.add(perSuggestionWeight) }
+            weights.add(gridWeight)
+            val sum = weights.sum().takeIf { it > 0f } ?: 1f
+
+            var leftTb = 0f
+            var right = leftTb + w * (weights[0] / sum)
+            keys.add(KeyRect("", RectF(leftTb, 0f, right, toolbarHeight), KeyType.TOOLBAR_MIC))
             leftTb = right
+            for (i in 0 until suggestionCount) {
+                right = leftTb + w * (weights[1 + i] / sum)
+                keys.add(KeyRect(currentSuggestions[i], RectF(leftTb, 0f, right, toolbarHeight), KeyType.SUGGESTION))
+                leftTb = right
+            }
+            keys.add(KeyRect("", RectF(leftTb, 0f, w.toFloat(), toolbarHeight), KeyType.TOOLBAR_GRID))
+        } else {
+            val toolbarWeights = toolbarKeyIds.map { specialWeights[it] ?: 1f }
+            val toolbarWeightSum = toolbarWeights.sum().takeIf { it > 0f } ?: 1f
+            var leftTb = 0f
+            for (i in 0 until 6) {
+                val right = leftTb + w * (toolbarWeights[i] / toolbarWeightSum)
+                val type = when (i) {
+                    0 -> KeyType.TOOLBAR_MIC
+                    1 -> KeyType.TOOLBAR_TRANSLATE
+                    2 -> KeyType.TOOLBAR_SETTINGS
+                    3 -> KeyType.TOOLBAR_EMOJI
+                    4 -> KeyType.TOOLBAR_CLIPBOARD
+                    else -> KeyType.TOOLBAR_GRID
+                }
+                keys.add(KeyRect("", RectF(leftTb, 0f, right, toolbarHeight), type))
+                leftTb = right
+            }
         }
 
         val contentRows: List<List<String>> = when (mode) {
@@ -437,6 +478,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     KeyType.TOOLBAR_GRID -> drawGridIcon(canvas, key.rect)
                     else -> {}
                 }
+                continue
+            }
+            if (key.type == KeyType.SUGGESTION) {
+                drawSuggestionKey(canvas, key)
                 continue
             }
             val paint = when {
@@ -641,6 +686,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             KeyType.TOOLBAR_MIC, KeyType.TOOLBAR_TRANSLATE -> {
                 android.widget.Toast.makeText(context, "این بخش هنوز آماده نیست", android.widget.Toast.LENGTH_SHORT).show()
             }
+            KeyType.SUGGESTION -> listener?.onSuggestionTap(key.label)
             KeyType.LETTER -> handleLetterTap(key.label)
             KeyType.SYMBOL -> {
                 flashKey(key.label)
@@ -803,6 +849,22 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             textAlign = Paint.Align.CENTER
         }
         canvas.drawText("،", cx, cy + r * 1.9f, commaPaint)
+    }
+
+    // این‌جوری کلمه‌ی طولانی، فضای گرید/منو رو نمی‌گیره و همیشه یه‌ذره جا براش می‌مونه
+    private fun drawSuggestionKey(canvas: Canvas, key: KeyRect) {
+        val paint = Paint(textPaint).apply { textSize = rowHeight * 0.3f }
+        val maxWidth = (key.rect.width() - 10f * density).coerceAtLeast(10f)
+        var text = key.label
+        if (paint.measureText(text) > maxWidth) {
+            while (text.length > 1 && paint.measureText("$text…") > maxWidth) {
+                text = text.dropLast(1)
+            }
+            text = "$text…"
+        }
+        val cx = key.rect.centerX()
+        val cy = key.rect.centerY() - (paint.descent() + paint.ascent()) / 2
+        canvas.drawText(text, cx, cy, paint)
     }
 
     private fun drawMicIcon(canvas: Canvas, rect: RectF) {
