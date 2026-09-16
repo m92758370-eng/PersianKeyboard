@@ -868,17 +868,33 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawMicIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
+        val strokePaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.7f * density
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val h = rect.height() * 0.34f
-        val bodyW = h * 0.5f
-        val bodyRect = RectF(cx - bodyW / 2, cy - h * 0.55f, cx + bodyW / 2, cy + h * 0.15f)
-        canvas.drawRoundRect(bodyRect, bodyW / 2, bodyW / 2, smileyStrokePaint)
-        val standRect = RectF(cx - h * 0.42f, cy - h * 0.15f, cx + h * 0.42f, cy + h * 0.4f)
-        canvas.drawArc(standRect, 0f, 180f, false, smileyStrokePaint)
-        canvas.drawLine(cx, cy + h * 0.4f, cx, cy + h * 0.65f, smileyStrokePaint)
-        canvas.drawLine(cx - h * 0.3f, cy + h * 0.65f, cx + h * 0.3f, cy + h * 0.65f, smileyStrokePaint)
+        val h = rect.height() * 0.36f // واحدِ اندازه: نصفِ ارتفاعِ آیکون
+
+        // بدنه‌ی کپسولی (سرِ میکروفون) — باریک‌تر و بلندتر، شبیه شکلِ واقعیِ میکروفون
+        val bodyW = h * 0.62f
+        val bodyTop = cy - h
+        val bodyBottom = cy + h * 0.05f
+        val bodyRect = RectF(cx - bodyW / 2f, bodyTop, cx + bodyW / 2f, bodyBottom)
+        canvas.drawRoundRect(bodyRect, bodyW / 2f, bodyW / 2f, strokePaint)
+
+        // حلقه‌ی نگه‌دارنده: یه "U" پهن‌تر از بدنه که دورِ پایینش رو می‌گیره
+        val standHalfW = h * 0.5f
+        val standTop = cy - h * 0.25f
+        val standBottom = cy + h * 0.55f
+        val standRect = RectF(cx - standHalfW, standTop, cx + standHalfW, standBottom)
+        canvas.drawArc(standRect, 0f, 180f, false, strokePaint)
+
+        // ساقه‌ی عمودی زیرِ حلقه، ختم به یه خطِ افقیِ پایه
+        canvas.drawLine(cx, standBottom, cx, cy + h * 0.85f, strokePaint)
+        canvas.drawLine(cx - h * 0.32f, cy + h * 0.85f, cx + h * 0.32f, cy + h * 0.85f, strokePaint)
     }
 
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
@@ -938,13 +954,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val cx = rect.centerX()
         val cy = rect.centerY()
         val rOuter = rect.height() * 0.27f
+        val rBody = rOuter * 0.6f
+        val toothW = rOuter * 0.34f
+        val toothH = rOuter * 0.4f
+        val holeR = rOuter * 0.3f
         val toothCount = 8
-        val rTip = rOuter.toDouble()
-        val rBody = (rOuter * 0.68f).toDouble()
-        val holeR = rOuter * 0.32f
-        val toothTipHalfDeg = 9.0
-        val toothBaseHalfDeg = 15.0
-        val stepDeg = 360.0 / toothCount
 
         val fillPaint = Paint().apply {
             color = smileyDotPaint.color
@@ -952,40 +966,20 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             style = Paint.Style.FILL
         }
 
-        fun pointAt(angleDeg: Double, r: Double): FloatArray {
-            val rad = Math.toRadians(angleDeg)
-            return floatArrayOf((cx + r * Math.cos(rad)).toFloat(), (cy + r * Math.sin(rad)).toFloat())
-        }
+        canvas.drawCircle(cx, cy, rBody, fillPaint)
 
-        // یه مسیرِ واحد برای کلِ دورِ دنده‌ها: هر دندونه ذوزنقه‌ایه (پایه‌ی پهن‌تر، نوکِ باریک‌تر)
-        // و بینِ دو دندونه‌ی پیاپی، با یه کمانِ روی شعاعِ بدنه گودیِ گرد ایجاد می‌کنیم
-        val path = Path()
-        val innerOval = RectF(
-            (cx - rBody).toFloat(), (cy - rBody).toFloat(),
-            (cx + rBody).toFloat(), (cy + rBody).toFloat()
-        )
         for (i in 0 until toothCount) {
-            val center = i * stepDeg
-            val baseStart = center - toothBaseHalfDeg
-            val tipStart = center - toothTipHalfDeg
-            val tipEnd = center + toothTipHalfDeg
-            val baseEnd = center + toothBaseHalfDeg
-
-            val p1 = pointAt(baseStart, rBody)
-            val p2 = pointAt(tipStart, rTip)
-            val p3 = pointAt(tipEnd, rTip)
-            val p4 = pointAt(baseEnd, rBody)
-
-            if (i == 0) path.moveTo(p1[0], p1[1]) else path.lineTo(p1[0], p1[1])
-            path.lineTo(p2[0], p2[1])
-            path.lineTo(p3[0], p3[1])
-            path.lineTo(p4[0], p4[1])
-
-            val nextBaseStart = center + stepDeg - toothBaseHalfDeg
-            path.arcTo(innerOval, baseEnd.toFloat(), (nextBaseStart - baseEnd).toFloat())
+            canvas.save()
+            canvas.rotate(i * (360f / toothCount), cx, cy)
+            val toothRect = RectF(
+                cx - toothW / 2f,
+                cy - rBody - toothH * 0.78f,
+                cx + toothW / 2f,
+                cy - rBody + toothH * 0.32f
+            )
+            canvas.drawRoundRect(toothRect, toothW * 0.3f, toothW * 0.3f, fillPaint)
+            canvas.restore()
         }
-        path.close()
-        canvas.drawPath(path, fillPaint)
 
         val holePaint = Paint().apply {
             color = fallbackBgColor
