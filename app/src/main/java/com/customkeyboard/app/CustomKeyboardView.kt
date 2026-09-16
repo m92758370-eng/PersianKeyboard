@@ -814,9 +814,17 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawArc(eyeRectLeft, 180f, 180f, true, fillPaint)
         canvas.drawArc(eyeRectRight, 180f, 180f, true, fillPaint)
 
-        // لبخند: یه هلالِ سادهٔ خطی (نه پرشده)، هم‌راستا با بقیه‌ی آیکون‌های خطی
-        val mouthRect = RectF(cx - size * 0.22f, top + size * 0.50f, cx + size * 0.22f, top + size * 0.72f)
-        canvas.drawArc(mouthRect, 20f, 140f, false, strokePaint)
+        // لبخند: شکل هلالی توپر و پررنگ که به سمت پایین باریک و نوک‌تیز می‌شه
+        val mouthHalfW = size * 0.25f
+        val mouthTopY = top + size * 0.55f
+        val mouthBottomY = top + size * 0.72f
+        val mouthPath = Path().apply {
+            moveTo(cx - mouthHalfW, mouthTopY)
+            quadTo(cx, mouthTopY - size * 0.06f, cx + mouthHalfW, mouthTopY)
+            quadTo(cx, mouthBottomY, cx - mouthHalfW, mouthTopY)
+            close()
+        }
+        canvas.drawPath(mouthPath, fillPaint)
     }
 
     private fun drawAutoTypeIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.15f) {
@@ -874,34 +882,39 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
-        val strokePaint = Paint(smileyStrokePaint).apply {
-            strokeWidth = 1.5f * density
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-        }
         val cx = rect.centerX()
         val cy = rect.centerY()
         val cardSize = rect.height() * 0.34f
         val cardCorner = cardSize * 0.22f
-        val overlap = cardSize * 0.30f // هم‌پوشانی افقی بین دو کارت
+        val overlap = cardSize * 0.32f // هم‌پوشانی افقی بین دو کارت
 
-        // کارتِ پشتی (سمت راست): مربعِ توخالیِ گردگوشه با دو خطِ افقیِ کوتاه (نمادِ متن)
+        val fillPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+        val seamPaint = Paint().apply {
+            color = fallbackBgColor
+            style = Paint.Style.STROKE
+            strokeWidth = 1.6f * density
+            isAntiAlias = true
+        }
+        val darkTextPaint = Paint().apply {
+            color = fallbackBgColor
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+
+        // کارت پشتی (سمت راست) با یه کاراکتر شبیه حروف ترجمه (سبک CJK)
         val backCx = cx + overlap
         val backRect = RectF(backCx - cardSize / 2, cy - cardSize / 2, backCx + cardSize / 2, cy + cardSize / 2)
-        canvas.drawRoundRect(backRect, cardCorner, cardCorner, strokePaint)
-        canvas.drawLine(backCx - cardSize * 0.22f, cy - cardSize * 0.12f, backCx + cardSize * 0.22f, cy - cardSize * 0.12f, strokePaint)
-        canvas.drawLine(backCx - cardSize * 0.22f, cy + cardSize * 0.14f, backCx + cardSize * 0.06f, cy + cardSize * 0.14f, strokePaint)
+        canvas.drawRoundRect(backRect, cardCorner, cardCorner, fillPaint)
+        val cjkPaint = Paint(darkTextPaint).apply { textSize = cardSize * 0.56f }
+        canvas.drawText("字", backCx, cy - (cjkPaint.descent() + cjkPaint.ascent()) / 2, cjkPaint)
 
-        // پاکسازیِ ناحیه‌ی زیرِ کارتِ جلویی با رنگِ پس‌زمینه، تا خطوطِ کارتِ پشتی از زیرش رد نشن
+        // کارت جلویی (سمت چپ) با حرف G توپر، با یه خط باریک دور خودش تا از کارت پشتی جدا دیده بشه
         val frontCx = cx - overlap
         val frontRect = RectF(frontCx - cardSize / 2, cy - cardSize / 2, frontCx + cardSize / 2, cy + cardSize / 2)
-        val erasePaint = Paint().apply { color = fallbackBgColor; style = Paint.Style.FILL; isAntiAlias = true }
-        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, erasePaint)
-
-        // کارتِ جلویی (سمت چپ): همون شکل، با یه خطِ افقیِ دیگه (نمادِ متنِ زبانِ مقصد)
-        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, strokePaint)
-        canvas.drawLine(frontCx - cardSize * 0.2f, cy, frontCx + cardSize * 0.2f, cy, strokePaint)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, fillPaint)
+        canvas.drawRoundRect(frontRect, cardCorner, cardCorner, seamPaint)
+        val gPaint = Paint(darkTextPaint).apply { textSize = cardSize * 0.62f; isFakeBoldText = true }
+        canvas.drawText("G", frontCx, cy - (gPaint.descent() + gPaint.ascent()) / 2, gPaint)
     }
 
     private fun drawTinyStar(canvas: Canvas, cx: Float, cy: Float, r: Float) {
@@ -925,39 +938,44 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val cx = rect.centerX()
         val cy = rect.centerY()
         val rOuter = rect.height() * 0.26f
-        val rBody = rOuter * 0.62f
-        val toothCount = 6
-        val toothLen = rOuter * 0.34f
-        val holeR = rOuter * 0.24f
+        val rBody = rOuter * 0.66f
+        val toothW = rOuter * 0.46f
+        val toothH = rOuter * 0.5f
+        val holeR = rOuter * 0.22f
 
-        val strokePaint = Paint(smileyStrokePaint).apply {
-            strokeWidth = 1.5f * density
-            style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-            strokeCap = Paint.Cap.ROUND
+        val fillPaint = Paint().apply {
+            color = smileyDotPaint.color
+            isAntiAlias = true
+            style = Paint.Style.FILL
         }
 
-        // یه Path واحد برای دور و دندونه‌ها (به‌جای دایره‌ی پرشده + دندونه‌های جدا)، شبیه سبکِ خطیِ شیائومی
-        val path = Path()
-        val steps = toothCount * 2
-        for (i in 0 until steps) {
-            val angle = Math.toRadians(i * 360.0 / steps)
-            val r = if (i % 2 == 0) rBody + toothLen else rBody
-            val x = cx + (r * Math.cos(angle)).toFloat()
-            val y = cy + (r * Math.sin(angle)).toFloat()
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        canvas.drawCircle(cx, cy, rBody, fillPaint)
+
+        for (i in 0 until 6) {
+            canvas.save()
+            canvas.rotate(i * 60f, cx, cy)
+            val toothRect = RectF(
+                cx - toothW / 2,
+                cy - rBody - toothH * 0.72f,
+                cx + toothW / 2,
+                cy - rBody + toothH * 0.28f
+            )
+            canvas.drawRoundRect(toothRect, toothW * 0.4f, toothW * 0.4f, fillPaint)
+            canvas.restore()
         }
-        path.close()
-        canvas.drawPath(path, strokePaint)
-        canvas.drawCircle(cx, cy, holeR, strokePaint)
+
+        val holePaint = Paint().apply {
+            color = fallbackBgColor
+            isAntiAlias = true
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(cx, cy, holeR, holePaint)
     }
 
     private fun drawClipboardIcon(canvas: Canvas, rect: RectF) {
         val strokePaint = Paint(smileyStrokePaint).apply {
             strokeWidth = 1.6f * density
             style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-            strokeCap = Paint.Cap.ROUND
         }
         val cx = rect.centerX()
         val cy = rect.centerY()
@@ -965,25 +983,28 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
         val bodyTop = cy - size / 2f
         val bodyBottom = cy + size / 2f
-        val bodyCorner = size * 0.12f
         val bodyRect = RectF(cx - size / 2f, bodyTop, cx + size / 2f, bodyBottom)
-        canvas.drawRoundRect(bodyRect, bodyCorner, bodyCorner, strokePaint) // گوشه‌های کمی گرد، مثل شیائومی
+        canvas.drawRect(bodyRect, strokePaint) // گوشه‌های تیز، بدون گرد شدن
 
-        // گیره‌ی بالای کلیپ‌بورد: یه مستطیلِ گردگوشه‌ی کوچیک، نیمی روی لبه‌ی بدنه
-        val clipW = size * 0.34f
-        val clipH = size * 0.16f
-        val clipRect = RectF(cx - clipW / 2f, bodyTop - clipH / 2f, cx + clipW / 2f, bodyTop + clipH / 2f)
-        canvas.drawRoundRect(clipRect, clipH * 0.4f, clipH * 0.4f, strokePaint)
+        // یه نیم‌دایره‌ی توخالی (فقط خط دور) وسط لبه‌ی بالا، با یه نقطه‌ی توپر کوچیک وسطش
+        val clipR = size * 0.15f
+        val clipRect = RectF(cx - clipR, bodyTop - clipR, cx + clipR, bodyTop + clipR)
+        canvas.drawArc(clipRect, 180f, 180f, false, strokePaint)
+        val dotPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+        canvas.drawCircle(cx, bodyTop - clipR * 0.3f, clipR * 0.2f, dotPaint)
 
         // سه خط داخلی؛ دوتای اول تمام‌عرض و هم‌تراز، سومی از سمت چپ کوتاه‌تره
         // و لبه‌ی راستش با اون دوتا یکیه (فقط از چپ نصفه شده)
-        val linePaint = Paint(strokePaint).apply { strokeWidth = 1.5f * density }
+        val linePaint = Paint(smileyStrokePaint).apply {
+            strokeWidth = 1.6f * density
+            strokeCap = Paint.Cap.ROUND
+        }
         val innerRight = cx + size * 0.27f
         val innerLeftFull = cx - size * 0.27f
         val innerLeftShort = cx - size * 0.09f
-        val lineY1 = bodyTop + size * 0.32f
-        val lineY2 = bodyTop + size * 0.53f
-        val lineY3 = bodyTop + size * 0.74f
+        val lineY1 = bodyTop + size * 0.26f
+        val lineY2 = bodyTop + size * 0.49f
+        val lineY3 = bodyTop + size * 0.73f
         canvas.drawLine(innerLeftFull, lineY1, innerRight, lineY1, linePaint)
         canvas.drawLine(innerLeftFull, lineY2, innerRight, lineY2, linePaint)
         canvas.drawLine(innerLeftShort, lineY3, innerRight, lineY3, linePaint)
@@ -1026,18 +1047,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val cx = rect.centerX()
         val cy = rect.centerY()
         val s = rect.height() * 0.16f
-        val gap = rect.height() * 0.08f
-        val strokePaint = Paint(smileyStrokePaint).apply {
-            strokeWidth = 1.4f * density
-            style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-        }
-        val corner = 1.5f * density
+        val gap = rect.height() * 0.07f
         for (row in -1..0) {
             for (col in -1..0) {
                 val left = cx + col * (s + gap) + gap / 2
                 val top = cy + row * (s + gap) + gap / 2
-                canvas.drawRoundRect(RectF(left, top, left + s, top + s), corner, corner, strokePaint)
+                canvas.drawRoundRect(RectF(left, top, left + s, top + s), 2f * density, 2f * density, smileyDotPaint)
             }
         }
     }
