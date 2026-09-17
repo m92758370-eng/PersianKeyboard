@@ -828,27 +828,111 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawAutoTypeIcon(canvas: Canvas, rect: RectF, radius: Float = rowHeight * 0.15f) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
         val cx = rect.centerX()
         val cy = rect.centerY() - radius * 0.55f
         val r = radius
 
-        canvas.drawCircle(cx, cy, r, smileyStrokePaint)
-
-        val eyeR = r * 0.11f
-        val eyeOffsetX = r * 0.38f
-        val eyeOffsetY = r * 0.22f
-        canvas.drawCircle(cx - eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
-        canvas.drawCircle(cx + eyeOffsetX, cy - eyeOffsetY, eyeR, smileyDotPaint)
-
-        val mouthRect = RectF(cx - r * 0.55f, cy - r * 0.35f, cx + r * 0.55f, cy + r * 0.6f)
-        canvas.drawArc(mouthRect, 20f, 140f, false, smileyStrokePaint)
-
-        val commaPaint = Paint(textPaint).apply {
-            textSize = r * 1.3f
-            textAlign = Paint.Align.CENTER
+        val strokePaint = Paint(smileyStrokePaint).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = r * 0.10f
+            strokeCap = Paint.Cap.ROUND
         }
-        canvas.drawText("،", cx, cy + r * 1.9f, commaPaint)
+        canvas.drawCircle(cx, cy, r, strokePaint)
+
+        val fillPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+
+        // چشم‌ها
+        val eyeR = r * 0.14f
+        val eyeOffsetX = r * 0.37f
+        val eyeOffsetY = r * 0.24f
+        canvas.drawCircle(cx - eyeOffsetX, cy - eyeOffsetY, eyeR, fillPaint)
+        canvas.drawCircle(cx + eyeOffsetX, cy - eyeOffsetY, eyeR, fillPaint)
+
+        // لبخندِ توپر (به‌جای خطِ نازکِ کمانی)
+        val mouthHalfW = r * 0.46f
+        val mouthTopY = cy + r * 0.24f
+        val mouthTipY = cy + r * 0.59f
+        val mouthPath = Path().apply {
+            moveTo(cx - mouthHalfW, mouthTopY)
+            quadTo(cx, mouthTopY - r * 0.05f, cx + mouthHalfW, mouthTopY)
+            quadTo(cx, mouthTipY, cx - mouthHalfW, mouthTopY)
+            close()
+        }
+        canvas.drawPath(mouthPath, fillPaint)
+
+        // علامتِ کاما — شکلِ برداریِ دقیق و خمیده (به‌جای گلیفِ فونتِ نازک)
+        val commaPath = Path().apply {
+            moveTo(cx + 0.0560f * r, cy + 3.0960f * r)
+            lineTo(cx + 0.0160f * r, cy + 3.1200f * r)
+            lineTo(cx + -0.0080f * r, cy + 3.1440f * r)
+            lineTo(cx + -0.0240f * r, cy + 3.1680f * r)
+            lineTo(cx + -0.0480f * r, cy + 3.1920f * r)
+            lineTo(cx + -0.0640f * r, cy + 3.2160f * r)
+            lineTo(cx + -0.0800f * r, cy + 3.2400f * r)
+            lineTo(cx + -0.0960f * r, cy + 3.2640f * r)
+            lineTo(cx + -0.1120f * r, cy + 3.2880f * r)
+            lineTo(cx + -0.1280f * r, cy + 3.3120f * r)
+            lineTo(cx + -0.1440f * r, cy + 3.3360f * r)
+            lineTo(cx + -0.1520f * r, cy + 3.3600f * r)
+            lineTo(cx + -0.1680f * r, cy + 3.3840f * r)
+            lineTo(cx + -0.1840f * r, cy + 3.4080f * r)
+            lineTo(cx + -0.1920f * r, cy + 3.4320f * r)
+            lineTo(cx + -0.2080f * r, cy + 3.4560f * r)
+            lineTo(cx + -0.2160f * r, cy + 3.4800f * r)
+            lineTo(cx + -0.2240f * r, cy + 3.5040f * r)
+            lineTo(cx + -0.2320f * r, cy + 3.5280f * r)
+            lineTo(cx + -0.2400f * r, cy + 3.5520f * r)
+            lineTo(cx + -0.2480f * r, cy + 3.5760f * r)
+            lineTo(cx + -0.2560f * r, cy + 3.6000f * r)
+            lineTo(cx + -0.2640f * r, cy + 3.6240f * r)
+            lineTo(cx + -0.2640f * r, cy + 3.6480f * r)
+            lineTo(cx + -0.2640f * r, cy + 3.6720f * r)
+            lineTo(cx + -0.2640f * r, cy + 3.6960f * r)
+            lineTo(cx + -0.2640f * r, cy + 3.7200f * r)
+            lineTo(cx + -0.2560f * r, cy + 3.7440f * r)
+            lineTo(cx + -0.2480f * r, cy + 3.7680f * r)
+            lineTo(cx + -0.2400f * r, cy + 3.7920f * r)
+            lineTo(cx + -0.2240f * r, cy + 3.8160f * r)
+            lineTo(cx + -0.2000f * r, cy + 3.8400f * r)
+            lineTo(cx + -0.1680f * r, cy + 3.8640f * r)
+            lineTo(cx + -0.1120f * r, cy + 3.8880f * r)
+            lineTo(cx + -0.0240f * r, cy + 3.8880f * r)
+            lineTo(cx + 0.0400f * r, cy + 3.8640f * r)
+            lineTo(cx + 0.0720f * r, cy + 3.8400f * r)
+            lineTo(cx + 0.0960f * r, cy + 3.8160f * r)
+            lineTo(cx + 0.1200f * r, cy + 3.7920f * r)
+            lineTo(cx + 0.1280f * r, cy + 3.7680f * r)
+            lineTo(cx + 0.1360f * r, cy + 3.7440f * r)
+            lineTo(cx + 0.1440f * r, cy + 3.7200f * r)
+            lineTo(cx + 0.1360f * r, cy + 3.6960f * r)
+            lineTo(cx + 0.1280f * r, cy + 3.6720f * r)
+            lineTo(cx + 0.0960f * r, cy + 3.6480f * r)
+            lineTo(cx + 0.0320f * r, cy + 3.6240f * r)
+            lineTo(cx + 0.0000f * r, cy + 3.6000f * r)
+            lineTo(cx + -0.0080f * r, cy + 3.5760f * r)
+            lineTo(cx + -0.0160f * r, cy + 3.5520f * r)
+            lineTo(cx + -0.0160f * r, cy + 3.5280f * r)
+            lineTo(cx + -0.0080f * r, cy + 3.5040f * r)
+            lineTo(cx + -0.0080f * r, cy + 3.4800f * r)
+            lineTo(cx + 0.0000f * r, cy + 3.4560f * r)
+            lineTo(cx + 0.0080f * r, cy + 3.4320f * r)
+            lineTo(cx + 0.0160f * r, cy + 3.4080f * r)
+            lineTo(cx + 0.0320f * r, cy + 3.3840f * r)
+            lineTo(cx + 0.0400f * r, cy + 3.3600f * r)
+            lineTo(cx + 0.0560f * r, cy + 3.3360f * r)
+            lineTo(cx + 0.0640f * r, cy + 3.3120f * r)
+            lineTo(cx + 0.0800f * r, cy + 3.2880f * r)
+            lineTo(cx + 0.0880f * r, cy + 3.2640f * r)
+            lineTo(cx + 0.1040f * r, cy + 3.2400f * r)
+            lineTo(cx + 0.1200f * r, cy + 3.2160f * r)
+            lineTo(cx + 0.1360f * r, cy + 3.1920f * r)
+            lineTo(cx + 0.1440f * r, cy + 3.1680f * r)
+            lineTo(cx + 0.1440f * r, cy + 3.1440f * r)
+            lineTo(cx + 0.1360f * r, cy + 3.1200f * r)
+            lineTo(cx + 0.1120f * r, cy + 3.0960f * r)
+            close()
+        }
+        canvas.drawPath(commaPath, fillPaint)
     }
 
     // این‌جوری کلمه‌ی طولانی، فضای گرید/منو رو نمی‌گیره و همیشه یه‌ذره جا براش می‌مونه
@@ -1033,13 +1117,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private fun drawZwnjIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
-        val cy = rect.centerY() - rect.height() * 0.14f
-        val r = rect.height() * 0.15f
+        val cy = rect.centerY() - rect.height() * 0.171f
+        val r = rect.height() * 0.083f
 
         val dotPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
 
         // دایره‌ی نقطه‌چین (شبیه یه حلقه‌ی نقطه‌نقطه)
-        val ringDotRadius = r * 0.16f
+        val ringDotRadius = r * 0.133f
         val ringDotCount = 10
         for (i in 0 until ringDotCount) {
             val angle = 2.0 * Math.PI * i / ringDotCount
@@ -1060,8 +1144,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         canvas.drawLine(tickBaseX - tickLen * 0.25f, tickBaseY + tickLen * 0.45f, tickBaseX + tickLen * 0.5f, tickBaseY - tickLen * 0.05f, tickPaint)
 
         // نقطه‌ی جدا زیر دایره
-        val bigDotRadius = r * 0.34f
-        canvas.drawCircle(cx, cy + r * 2.3f, bigDotRadius, dotPaint)
+        val bigDotRadius = r * 0.419f
+        canvas.drawCircle(cx, cy + r * 4.15f, bigDotRadius, dotPaint)
     }
 
     private fun drawGridIcon(canvas: Canvas, rect: RectF) {
