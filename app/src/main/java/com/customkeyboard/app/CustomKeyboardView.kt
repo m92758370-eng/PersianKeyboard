@@ -1109,20 +1109,24 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun drawGlobeIcon(canvas: Canvas, rect: RectF) {
-        smileyStrokePaint.strokeWidth = 1.6f * density
         val cx = rect.centerX()
         val cy = rect.centerY()
         val r = rowHeight * 0.17f
+        smileyStrokePaint.strokeWidth = r * 0.18f // ضخیم و متناسب با اندازه‌ی آیکون
 
+        // دایره‌ی بیرونی
         canvas.drawCircle(cx, cy, r, smileyStrokePaint)
-        canvas.drawLine(cx - r, cy, cx + r, cy, smileyStrokePaint)
-        val vOval = RectF(cx - r * 0.42f, cy - r, cx + r * 0.42f, cy + r)
+
+        // بیضیِ عمودیِ وسط (نصف‌النهار)
+        val vrx = r * 0.37f
+        val vOval = RectF(cx - vrx, cy - r, cx + vrx, cy + r)
         canvas.drawOval(vOval, smileyStrokePaint)
 
-        val latOval1 = RectF(cx - r, cy - r * 1.15f, cx + r, cy - r * 0.15f)
-        canvas.drawArc(latOval1, 200f, 140f, false, smileyStrokePaint)
-        val latOval2 = RectF(cx - r, cy + r * 0.15f, cx + r, cy + r * 1.15f)
-        canvas.drawArc(latOval2, 20f, 140f, false, smileyStrokePaint)
+        // دو خطِ افقی (مدار)، هرکدوم فقط تا لبه‌ی داخلیِ دایره در همون ارتفاع امتداد داره
+        val dy = r * 0.30f
+        val halfW = kotlin.math.sqrt((r * r - dy * dy).coerceAtLeast(0f))
+        canvas.drawLine(cx - halfW, cy - dy, cx + halfW, cy - dy, smileyStrokePaint)
+        canvas.drawLine(cx - halfW, cy + dy, cx + halfW, cy + dy, smileyStrokePaint)
     }
 
     private fun handleLetterTap(label: String) {
