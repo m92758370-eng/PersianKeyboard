@@ -51,6 +51,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     companion object {
         private const val SPACE_LONG_PRESS_MS = 2000L
         private const val BACKSPACE_INITIAL_DELAY_MS = 400L
+        private const val LETTER_LONG_PRESS_MS = 350L
         private const val TOOLBAR_HEIGHT_DP = 42f
     }
 
@@ -140,6 +141,26 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             }
             handler.postDelayed(this, nextDelay)
         }
+    }
+
+    private var letterPressed = false
+    private var letterPointerId = -1
+    private var letterPressedKey: KeyRect? = null
+    private var letterLongPressTriggered = false
+    private val letterLongPressRunnable = Runnable {
+        val key = letterPressedKey
+        val alt = key?.let { longPressAltFor(it.label) }
+        if (key != null && alt != null) {
+            letterLongPressTriggered = true
+            flashKey(key.label)
+            listener?.onCommitText(alt)
+        }
+    }
+
+    // کاراکترِ جایگزینِ فشارِ طولانی برای یه حرف؛ فقط تو حالتِ فارسی + صفحه‌ی حروف فعاله
+    private fun longPressAltFor(label: String): String? {
+        if (!usePersian || mode != KeyboardMode.LETTERS) return null
+        return KeyboardLayouts.PERSIAN_LONG_PRESS[label]
     }
 
     private var langPressed = false
@@ -580,6 +601,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                         val now = System.currentTimeMillis()
                         langDoubleTapCandidate = (now - lastLangUpTime) < 300L
                     }
+                    KeyType.LETTER -> {
+                        letterPressed = true
+                        letterPointerId = pointerId
+                        letterPressedKey = key
+                        letterLongPressTriggered = false
+                        handler.postDelayed(letterLongPressRunnable, LETTER_LONG_PRESS_MS)
+                    }
                     else -> dispatchKey(key)
                 }
             }
@@ -616,6 +644,14 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     handler.removeCallbacks(backspaceRunnable)
                     backspacePressed = false
                 }
+                if (letterPressed && pointerId == letterPointerId) {
+                    handler.removeCallbacks(letterLongPressRunnable)
+                    if (!letterLongPressTriggered) {
+                        letterPressedKey?.let { dispatchKey(it) }
+                    }
+                    letterPressed = false
+                    letterPressedKey = null
+                }
             }
             MotionEvent.ACTION_CANCEL -> {
                 if (spacePressed) {
@@ -628,6 +664,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 if (backspacePressed) {
                     handler.removeCallbacks(backspaceRunnable)
                     backspacePressed = false
+                }
+                if (letterPressed) {
+                    handler.removeCallbacks(letterLongPressRunnable)
+                    letterPressed = false
+                    letterPressedKey = null
                 }
             }
         }
