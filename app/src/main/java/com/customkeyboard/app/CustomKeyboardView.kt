@@ -870,31 +870,31 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private fun drawMicIcon(canvas: Canvas, rect: RectF) {
         val cx = rect.centerX()
         val cy = rect.centerY()
-        val h = rect.height() * 0.36f // واحدِ اندازه: نصفِ ارتفاعِ آیکون
+        val h = rect.height() * 0.26f // واحدِ اندازه: هم‌مقیاس با بقیه‌ی آیکون‌های تولبار
 
         val strokePaint = Paint(smileyStrokePaint).apply {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
-            strokeWidth = h * 0.17f // ضخیم‌تر و متناسب با اندازه‌ی آیکون (به‌جای ضخامتِ ثابتِ قبلی)
+            strokeWidth = h * 0.22f // دیواره‌ی ضخیم‌تر برای جمع‌وجورتر شدنِ حفره‌ی وسطِ کپسول
         }
 
-        // بدنه‌ی کپسولی (سرِ میکروفون)
-        val bodyW = h * 0.62f
+        // بدنه‌ی کپسولی (سرِ میکروفون) — حفره‌ی وسط جمع‌وجورتر
+        val bodyW = h * 0.56f
         val bodyTop = cy - h
         val bodyBottom = cy + h * 0.05f
         val bodyRect = RectF(cx - bodyW / 2f, bodyTop, cx + bodyW / 2f, bodyBottom)
         canvas.drawRoundRect(bodyRect, bodyW / 2f, bodyW / 2f, strokePaint)
 
-        // حلقه‌ی نگه‌دارنده: بزرگ‌تر و نزدیک‌تر به بدنه (به‌جای فاصله‌ی زیاد قبلی)
-        val standHalfW = h * 0.67f
-        val standTop = cy - h * 0.63f
-        val standBottom = cy + h * 0.52f
+        // حلقه‌ی نگه‌دارنده: کوچیک‌تر از نسخه‌ی قبل
+        val standHalfW = h * 0.52f
+        val standTop = cy - h * 0.45f
+        val standBottom = cy + h * 0.42f
         val standRect = RectF(cx - standHalfW, standTop, cx + standHalfW, standBottom)
         canvas.drawArc(standRect, 0f, 180f, false, strokePaint)
 
-        // ساقه‌ی عمودی با نوکِ گرد — بدونِ خطِ افقیِ پایه (طبقِ نمونه)
-        canvas.drawLine(cx, standBottom, cx, cy + h * 0.85f, strokePaint)
+        // ساقه‌ی عمودی با نوکِ گرد — بدونِ خطِ افقیِ پایه
+        canvas.drawLine(cx, standBottom, cx, cy + h * 0.7f, strokePaint)
     }
 
     private fun drawTranslateIcon(canvas: Canvas, rect: RectF) {
