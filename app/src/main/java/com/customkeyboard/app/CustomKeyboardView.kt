@@ -342,10 +342,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         "toolbar_emoji", "toolbar_clipboard", "toolbar_grid"
     )
 
-    // شناسه‌ + عرضِ پیش‌فرضِ هر کلیدِ ردیف پایین (جمعشون از ۱۰۰ باید همون نسبت‌های قبلی رو بده)
+    // شناسه‌ + عرضِ پیش‌فرضِ هر کلیدِ ردیف پایین
+    // اندازه‌گیری‌شده از اسکرین‌شاتِ مرجع (پیکسل: ۱۲۳=۱۶۰، خنده=۹۴، گلوب=۱۱۸، فاصله=۳۲۲، فلش=۹۴، نیم‌فاصله=۱۲۰، اینتر=۱۶۰ — جمعاً ۱۰۰)
     private val bottomKeyDefaults = listOf(
-        "symbols_toggle" to 12f, "autotype" to 14f, "lang_switch" to 14f,
-        "space" to 22f, "pause_resume" to 13f, "zwnj" to 9f, "enter" to 16f
+        "symbols_toggle" to 15f, "autotype" to 9f, "lang_switch" to 11f,
+        "space" to 30f, "pause_resume" to 9f, "zwnj" to 11f, "enter" to 15f
     )
     private val bottomKeyTypes = listOf(
         KeyType.SYMBOLS_TOGGLE, KeyType.AUTOTYPE, KeyType.LANG_SWITCH,
