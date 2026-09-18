@@ -37,7 +37,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     var listener: Listener? = null
 
-    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, ZWNJ, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID, SUGGESTION }
+    private enum class KeyType { LETTER, SYMBOL, SPACE, BACKSPACE, ENTER, LANG_SWITCH, AUTOTYPE, PAUSE_RESUME, WORD_SHUFFLE, SYMBOLS_TOGGLE, ZWNJ, SHIFT, TOOLBAR_MIC, TOOLBAR_TRANSLATE, TOOLBAR_SETTINGS, TOOLBAR_EMOJI, TOOLBAR_CLIPBOARD, TOOLBAR_GRID, SUGGESTION }
     private enum class KeyboardMode { LETTERS, SYMBOLS, NUMBERS, EMOJI }
 
     private data class KeyRect(
@@ -50,7 +50,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     companion object {
         private const val SPACE_LONG_PRESS_MS = 2000L
-        private const val BACKSPACE_INITIAL_DELAY_MS = 400L
+        private const val BACKSPACE_INITIAL_DELAY_MS = 280L
         private const val LETTER_LONG_PRESS_MS = 350L
         private const val TOOLBAR_HEIGHT_DP = 42f
     }
@@ -134,10 +134,10 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             listener?.onBackspace()
             backspaceRepeatCount++
             val nextDelay = when {
-                backspaceRepeatCount < 8 -> 90L
-                backspaceRepeatCount < 16 -> 60L
-                backspaceRepeatCount < 24 -> 40L
-                else -> 25L
+                backspaceRepeatCount < 6 -> 55L
+                backspaceRepeatCount < 12 -> 35L
+                backspaceRepeatCount < 20 -> 20L
+                else -> 12L
             }
             handler.postDelayed(this, nextDelay)
         }
@@ -162,6 +162,14 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         if (!usePersian || mode != KeyboardMode.LETTERS) return null
         return KeyboardLayouts.PERSIAN_LONG_PRESS[label]
     }
+
+    // شیفت (فقط تو صفحه‌کلیدِ انگلیسی): یه ضربه = بزرگ‌شدنِ یه‌باره‌ی حرفِ بعدی، دو ضربه‌ی پشتِ‌هم = قفلِ حروفِ بزرگ
+    private var isShiftOn = false
+    private var isCapsLock = false
+    private var shiftPressed = false
+    private var shiftPointerId = -1
+    private var shiftDoubleTapCandidate = false
+    private var lastShiftUpTime = 0L
 
     private var langPressed = false
     private var langPointerId = -1
@@ -310,6 +318,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     fun setLanguage(persian: Boolean) {
         usePersian = persian
+        isShiftOn = false
+        isCapsLock = false
         rebuildKeys(width, height)
         invalidate()
     }
@@ -399,7 +409,13 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
 
         val contentRows: List<List<String>> = when (mode) {
-            KeyboardMode.LETTERS -> if (usePersian) getPersianLetterRows() else KeyboardLayouts.ENGLISH
+            KeyboardMode.LETTERS -> if (usePersian) {
+                getPersianLetterRows()
+            } else if (isShiftOn || isCapsLock) {
+                KeyboardLayouts.ENGLISH.map { r -> r.map { it.uppercase() } }
+            } else {
+                KeyboardLayouts.ENGLISH
+            }
             KeyboardMode.SYMBOLS -> KeyboardLayouts.SYMBOLS
             KeyboardMode.NUMBERS -> KeyboardLayouts.NUMBERS
             KeyboardMode.EMOJI -> KeyboardLayouts.EMOJI
@@ -427,10 +443,18 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             runningTop = bottom
 
             if (isLastContentRow) {
+                val isEnglishLetters = contentKeyType == KeyType.LETTER && !usePersian
                 val rowWeights = row.map { widthWeights[it] ?: 1f }
                 val backspaceWeight = widthWeights["⌫"] ?: 1f
-                val sumWeights = rowWeights.sum() + backspaceWeight
+                val shiftWeight = 1.3f
+                val sumWeights = rowWeights.sum() + backspaceWeight + (if (isEnglishLetters) shiftWeight else 0f)
                 var left = 0f
+                if (isEnglishLetters) {
+                    val right = left + w * (shiftWeight / sumWeights)
+                    val shiftLabel = if (isCapsLock) "⇪" else "⇧"
+                    keys.add(KeyRect(shiftLabel, RectF(left, top, right, bottom), KeyType.SHIFT))
+                    left = right
+                }
                 for ((colIndex, label) in row.withIndex()) {
                     val right = left + w * (rowWeights[colIndex] / sumWeights)
                     val hasRepl = contentKeyType == KeyType.LETTER && PrefsHelper.getReplacement(context, label).isNotBlank()
@@ -510,6 +534,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.type == KeyType.ENTER || key.type == KeyType.SYMBOLS_TOGGLE ||
                     key.type == KeyType.AUTOTYPE || key.type == KeyType.ZWNJ -> enterAccentPaint
                 key.type == KeyType.BACKSPACE -> accentPaint
+                key.type == KeyType.SHIFT && (isShiftOn || isCapsLock) -> accentPaint
                 key.type == KeyType.LETTER || key.type == KeyType.SYMBOL -> keyPaint
                 else -> specialKeyPaint
             }
@@ -552,6 +577,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 drawEnterIcon(canvas, key.rect)
             } else if (key.type == KeyType.ZWNJ) {
                 drawZwnjIcon(canvas, key.rect)
+            } else if (key.type == KeyType.SHIFT) {
+                drawShiftIcon(canvas, key.rect)
             } else {
                 canvas.drawText(key.label, cx, cy, textPaint)
             }
@@ -608,6 +635,12 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                         letterLongPressTriggered = false
                         handler.postDelayed(letterLongPressRunnable, LETTER_LONG_PRESS_MS)
                     }
+                    KeyType.SHIFT -> {
+                        shiftPressed = true
+                        shiftPointerId = pointerId
+                        val now = System.currentTimeMillis()
+                        shiftDoubleTapCandidate = (now - lastShiftUpTime) < 300L
+                    }
                     else -> dispatchKey(key)
                 }
             }
@@ -652,6 +685,24 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     letterPressed = false
                     letterPressedKey = null
                 }
+                if (shiftPressed && pointerId == shiftPointerId) {
+                    if (shiftDoubleTapCandidate) {
+                        isCapsLock = !isCapsLock
+                        isShiftOn = false
+                        lastShiftUpTime = 0L
+                    } else {
+                        if (isCapsLock) {
+                            isCapsLock = false
+                            isShiftOn = false
+                        } else {
+                            isShiftOn = !isShiftOn
+                        }
+                        lastShiftUpTime = System.currentTimeMillis()
+                    }
+                    shiftPressed = false
+                    rebuildKeys(width, height)
+                    invalidate()
+                }
             }
             MotionEvent.ACTION_CANCEL -> {
                 if (spacePressed) {
@@ -669,6 +720,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                     handler.removeCallbacks(letterLongPressRunnable)
                     letterPressed = false
                     letterPressedKey = null
+                }
+                if (shiftPressed) {
+                    shiftPressed = false
                 }
             }
         }
@@ -774,6 +828,44 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val dotSpacing = rowHeight * 0.065f
         for (i in -2..2) {
             canvas.drawCircle(cx, cy + i * dotSpacing, dotR, smileyDotPaint)
+        }
+    }
+
+    // آیکونِ شیفت: پیکانِ رو به بالا؛ وقتی فعاله توپر و پررنگه، وقتی قفلِ حروفِ بزرگه یه خطِ زیرش هم داره
+    private fun drawShiftIcon(canvas: Canvas, rect: RectF) {
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val r = rowHeight * 0.19f
+
+        val arrowPath = Path().apply {
+            moveTo(cx, cy - r)
+            lineTo(cx + r * 0.62f, cy - r * 0.14f)
+            lineTo(cx + r * 0.26f, cy - r * 0.14f)
+            lineTo(cx + r * 0.26f, cy + r * 0.55f)
+            lineTo(cx - r * 0.26f, cy + r * 0.55f)
+            lineTo(cx - r * 0.26f, cy - r * 0.14f)
+            lineTo(cx - r * 0.62f, cy - r * 0.14f)
+            close()
+        }
+
+        if (isShiftOn || isCapsLock) {
+            val fillPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+            canvas.drawPath(arrowPath, fillPaint)
+        } else {
+            val outlinePaint = Paint(smileyStrokePaint).apply {
+                strokeWidth = r * 0.16f
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawPath(arrowPath, outlinePaint)
+        }
+
+        if (isCapsLock) {
+            val barPaint = Paint(smileyDotPaint).apply { style = Paint.Style.FILL; isAntiAlias = true }
+            canvas.drawRoundRect(
+                RectF(cx - r * 0.62f, cy + r * 0.8f, cx + r * 0.62f, cy + r * 0.98f),
+                r * 0.08f, r * 0.08f, barPaint
+            )
         }
     }
 
@@ -1259,6 +1351,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         val toCommit = if (replacement.isNotBlank()) replacement else label
         flashKey(label)
         listener?.onCommitText(toCommit)
+        if (isShiftOn && !isCapsLock) {
+            isShiftOn = false
+            rebuildKeys(width, height)
+            invalidate()
+        }
     }
 
     private fun flashKey(label: String) {
