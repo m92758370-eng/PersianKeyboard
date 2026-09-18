@@ -376,12 +376,13 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_LETTER_WIDTH_WEIGHTS, serialized).apply()
     }
 
-    // وزن ارتفاع هر کدوم از ۳ ردیف حروف فارسی (پیش‌فرض هر سه ۱)
+    // وزن ارتفاع هر کدوم از ۳ ردیف حروف فارسی
+    // پیش‌فرض‌های جدید، اندازه‌گیری‌شده از اسکرین‌شاتِ مرجع (نسبتِ ۱۳۰:۱۴۲:۱۳۰ پیکسل)
     fun getPersianRowHeightWeights(context: Context): List<Float> {
         val raw = prefs(context).getString(KEY_LETTER_ROW_HEIGHT_WEIGHTS, "") ?: ""
-        if (raw.isEmpty()) return listOf(1f, 1f, 1f)
+        if (raw.isEmpty()) return listOf(0.945f, 1.033f, 0.945f)
         val list = raw.split(SEPARATOR).mapNotNull { it.toFloatOrNull() }
-        return if (list.size == 3) list else listOf(1f, 1f, 1f)
+        return if (list.size == 3) list else listOf(0.945f, 1.033f, 0.945f)
     }
 
     fun setPersianRowHeightWeights(context: Context, weights: List<Float>) {
@@ -405,18 +406,18 @@ object PrefsHelper {
         prefs(context).edit().putString(KEY_SPECIAL_KEY_WIDTH_WEIGHTS, serialized).apply()
     }
 
-    // وزن ارتفاع نوار بالا (پیش‌فرض ۱)
+    // وزن ارتفاع نوار بالا — پیش‌فرضِ جدید از رویِ اندازه‌گیریِ اسکرین‌شاتِ مرجع (≈۱.۲ برابرِ حالتِ قبلی)
     fun getToolbarHeightWeight(context: Context): Float {
-        return prefs(context).getFloat(KEY_TOOLBAR_HEIGHT_WEIGHT, 1f)
+        return prefs(context).getFloat(KEY_TOOLBAR_HEIGHT_WEIGHT, 1.2f)
     }
 
     fun setToolbarHeightWeight(context: Context, weight: Float) {
         prefs(context).edit().putFloat(KEY_TOOLBAR_HEIGHT_WEIGHT, weight).apply()
     }
 
-    // وزن ارتفاع ردیف پایین (پیش‌فرض ۱)
+    // وزن ارتفاع ردیف پایین — پیش‌فرضِ جدید از رویِ اندازه‌گیریِ اسکرین‌شاتِ مرجع
     fun getBottomRowHeightWeight(context: Context): Float {
-        return prefs(context).getFloat(KEY_BOTTOM_ROW_HEIGHT_WEIGHT, 1f)
+        return prefs(context).getFloat(KEY_BOTTOM_ROW_HEIGHT_WEIGHT, 1.076f)
     }
 
     fun setBottomRowHeightWeight(context: Context, weight: Float) {
