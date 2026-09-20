@@ -6,12 +6,16 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
@@ -117,6 +121,20 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "دفعه‌ی بعد که کیبورد رو باز کنی اعمال می‌شه", Toast.LENGTH_SHORT).show()
         }
 
+        buildFlashColorPalette()
+        updateFlashColorPreview()
+        findViewById<Button>(R.id.btnApplyFlashColorHex).setOnClickListener {
+            val hex = findViewById<EditText>(R.id.flashColorHexEditText).text.toString().trim().removePrefix("#")
+            try {
+                val color = Color.parseColor("#$hex")
+                PrefsHelper.setFlashColor(this, color)
+                updateFlashColorPreview()
+                Toast.makeText(this, "رنگ فلش کلید ذخیره شد", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "کدِ رنگ نامعتبره (مثلاً FF5733)", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         autoTypeEditText = findViewById(R.id.autoTypeEditText)
         autoTypeEditText.setText(PrefsHelper.getAutoTypeText(this))
 
@@ -140,6 +158,50 @@ class SettingsActivity : AppCompatActivity() {
             PrefsHelper.setAutoTypeDelayMs(this, delay)
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun buildFlashColorPalette() {
+        val grid = findViewById<GridLayout>(R.id.flashColorGrid)
+        val palette = listOf(
+            "#E23B3B", "#FF6B6B", "#FF922B", "#F59F00", "#FCC419", "#94D82D",
+            "#40C057", "#20C997", "#15AABF", "#228BE6", "#4C6EF5", "#7950F2",
+            "#BE4BDB", "#E64980", "#F06595", "#868E96", "#495057", "#212529",
+            "#FFFFFF", "#FFC9C9", "#B2F2BB", "#A5D8FF", "#D0BFFF", "#000000"
+        ).map { Color.parseColor(it) }
+
+        val density = resources.displayMetrics.density
+        val sizePx = (36 * density).toInt()
+        val marginPx = (6 * density).toInt()
+
+        for (color in palette) {
+            val swatch = View(this)
+            swatch.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(color)
+                setStroke((1.5f * density).toInt(), Color.parseColor("#888888"))
+            }
+            val lp = GridLayout.LayoutParams().apply {
+                width = sizePx
+                height = sizePx
+                setMargins(marginPx, marginPx, marginPx, marginPx)
+            }
+            swatch.layoutParams = lp
+            swatch.setOnClickListener {
+                PrefsHelper.setFlashColor(this, color)
+                updateFlashColorPreview()
+                Toast.makeText(this, "رنگ فلش کلید ذخیره شد", Toast.LENGTH_SHORT).show()
+            }
+            grid.addView(swatch)
+        }
+    }
+
+    private fun updateFlashColorPreview() {
+        val color = PrefsHelper.getFlashColor(this)
+        findViewById<View>(R.id.viewFlashColorPreview).background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color)
+        }
+        findViewById<TextView>(R.id.txtFlashColorStatus).text = "رنگ فعلی: #%06X".format(0xFFFFFF and color)
     }
 
     private fun updateBackgroundStatus() {
