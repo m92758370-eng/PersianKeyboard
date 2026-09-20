@@ -258,6 +258,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
             smileyStrokePaint.color = Color.BLACK
             smileyDotPaint.color = Color.BLACK
         }
+        highlightPaint.color = PrefsHelper.getFlashColor(context)
     }
 
     private fun centerCrop(src: Bitmap, targetW: Int, targetH: Int): Bitmap {
@@ -649,6 +650,7 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 if (spacePressed && pointerId == spacePointerId) {
                     handler.removeCallbacks(spaceLongPressRunnable)
                     if (!spaceLongPressTriggered) {
+                        keys.firstOrNull { it.type == KeyType.SPACE }?.label?.let { flashKey(it) }
                         if (mode == KeyboardMode.NUMBERS) {
                             listener?.onCommitText("٠")
                         } else {
