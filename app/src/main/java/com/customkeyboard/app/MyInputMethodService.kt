@@ -512,9 +512,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
             if (!autoTypeRunning) return@postDelayed
             val ch = autoTypeChars[autoTypeIndex]
             currentInputConnection?.commitText(ch, 1)
-            if (ch.isNotBlank()) {
-                keyboardView.highlightKey(ch)
-            }
+            keyboardView.highlightKey(ch)
             autoTypeIndex++
             PrefsHelper.setAutoTypeProgress(this, autoTypeIndex)
             scheduleNextChar()
