@@ -43,6 +43,7 @@ object PrefsHelper {
     private const val KEY_KB_HEIGHT_SCALE = "kb_height_scale"
     private const val KEY_KB_LEFT_MARGIN_FRACTION = "kb_left_margin_fraction"
     private const val KEY_USER_WORD_COUNTS = "user_word_counts"
+    private const val KEY_FLASH_COLOR = "key_flash_color"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -422,6 +423,15 @@ object PrefsHelper {
 
     fun setBottomRowHeightWeight(context: Context, weight: Float) {
         prefs(context).edit().putFloat(KEY_BOTTOM_ROW_HEIGHT_WEIGHT, weight).apply()
+    }
+
+    // رنگِ فلشِ لحظه‌ای کلیدها موقعِ ضربه‌زدن (پیش‌فرض قرمز، از تنظیمات قابلِ تغییره)
+    fun getFlashColor(context: Context): Int {
+        return prefs(context).getInt(KEY_FLASH_COLOR, android.graphics.Color.parseColor("#E23B3B"))
+    }
+
+    fun setFlashColor(context: Context, color: Int) {
+        prefs(context).edit().putInt(KEY_FLASH_COLOR, color).apply()
     }
 
     fun resetKeyboardEditorLayout(context: Context) {
