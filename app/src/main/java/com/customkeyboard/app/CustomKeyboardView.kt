@@ -1373,6 +1373,11 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     fun highlightKey(char: String) {
-        flashKey(char)
+        if (char == " ") {
+            // کلیدِ فاصله لیبلِ نمایشیِ خودش رو داره (مثلاً «فارسی»)، نه خودِ کاراکترِ اسپیس
+            keys.firstOrNull { it.type == KeyType.SPACE }?.label?.let { flashKey(it) }
+        } else {
+            flashKey(char)
+        }
     }
 }
