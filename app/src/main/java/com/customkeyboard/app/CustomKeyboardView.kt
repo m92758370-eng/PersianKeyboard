@@ -1,5 +1,8 @@
 package com.customkeyboard.app
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -16,6 +19,7 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import kotlin.random.Random
 
 class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
@@ -116,6 +120,8 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
 
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
+    private var highlightAlpha: Int = 0
+    private var highlightAnimator: ValueAnimator? = null
 
     private var spacePressed = false
     private var spacePointerId = -1
@@ -539,6 +545,9 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
                 key.type == KeyType.SHIFT && (isShiftOn || isCapsLock) -> accentPaint
                 key.type == KeyType.LETTER || key.type == KeyType.SYMBOL -> keyPaint
                 else -> specialKeyPaint
+            }
+            if (paint === highlightPaint) {
+                highlightPaint.alpha = highlightAlpha
             }
             val pad = keyPadDp * density
             val paddedRect = RectF(key.rect.left + pad, key.rect.top + pad, key.rect.right - pad, key.rect.bottom - pad)
@@ -1362,14 +1371,28 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun flashKey(label: String) {
+        highlightAnimator?.cancel()
         highlightedLabel = label
+        highlightAlpha = 255
         invalidate()
-        handler.postDelayed({
-            if (highlightedLabel == label) {
-                highlightedLabel = null
+        highlightAnimator = ValueAnimator.ofInt(255, 0).apply {
+            duration = 150L
+            startDelay = 35L
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                highlightAlpha = it.animatedValue as Int
                 invalidate()
             }
-        }, 70)
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (highlightedLabel == label) {
+                        highlightedLabel = null
+                        invalidate()
+                    }
+                }
+            })
+            start()
+        }
     }
 
     fun highlightKey(char: String) {
