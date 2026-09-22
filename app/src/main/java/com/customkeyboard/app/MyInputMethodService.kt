@@ -486,12 +486,14 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         autoTypeIndex = 0
         PrefsHelper.setAutoTypeProgress(this, 0)
         autoTypeRunning = true
+        keyboardView.keepScreenOn = true
         Toast.makeText(this, "تایپ خودکار شروع شد", Toast.LENGTH_SHORT).show()
         scheduleNextChar()
     }
 
     private fun resumeAutoType() {
         autoTypeRunning = true
+        keyboardView.keepScreenOn = true
         scheduleNextChar()
     }
 
@@ -503,6 +505,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
         }
         if (autoTypeIndex >= autoTypeChars.size) {
             autoTypeRunning = false
+            keyboardView.keepScreenOn = false
             PrefsHelper.setAutoTypeProgress(this, 0)
             Toast.makeText(this, "تایپ خودکار تمام شد", Toast.LENGTH_SHORT).show()
             return
@@ -521,6 +524,7 @@ class MyInputMethodService : InputMethodService(), CustomKeyboardView.Listener {
 
     private fun pauseAutoType() {
         autoTypeRunning = false
+        keyboardView.keepScreenOn = false
         handler.removeCallbacksAndMessages(null)
     }
 }
