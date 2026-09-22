@@ -10,6 +10,9 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Spannable
+import android.text.style.ForegroundColorSpan
+import android.text.style.UnderlineSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -137,6 +140,7 @@ class SettingsActivity : AppCompatActivity() {
 
         autoTypeEditText = findViewById(R.id.autoTypeEditText)
         autoTypeEditText.setText(PrefsHelper.getAutoTypeText(this))
+        applyAutoTypeProgressHighlight()
 
         speedLabel = findViewById(R.id.speedLabel)
         speedSeekBar = findViewById(R.id.speedSeekBar)
@@ -154,6 +158,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSaveAutoType).setOnClickListener {
             PrefsHelper.setAutoTypeText(this, autoTypeEditText.text.toString())
             PrefsHelper.setAutoTypeProgress(this, 0)
+            applyAutoTypeProgressHighlight()
             val delay = PrefsHelper.MIN_DELAY_MS + speedSeekBar.progress
             PrefsHelper.setAutoTypeDelayMs(this, delay)
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
@@ -202,6 +207,28 @@ class SettingsActivity : AppCompatActivity() {
             setColor(color)
         }
         findViewById<TextView>(R.id.txtFlashColorStatus).text = "رنگ فعلی: #%06X".format(0xFFFFFF and color)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // شاید کاربر از کیبورد برگشته و تایپِ خودکار پیشرفت کرده — نشونه‌گذاری رو تازه کن
+        if (::autoTypeEditText.isInitialized) {
+            applyAutoTypeProgressHighlight()
+        }
+    }
+
+    // بخشی از متن که تا الان توسط تایپِ خودکار استفاده شده رو قرمز و زیرخط‌دار نشون می‌ده
+    private fun applyAutoTypeProgressHighlight() {
+        val editable = autoTypeEditText.text ?: return
+        editable.getSpans(0, editable.length, UnderlineSpan::class.java).forEach { editable.removeSpan(it) }
+        editable.getSpans(0, editable.length, ForegroundColorSpan::class.java).forEach { editable.removeSpan(it) }
+
+        val progress = PrefsHelper.getAutoTypeProgress(this).coerceIn(0, editable.length)
+        if (progress > 0) {
+            val red = Color.parseColor("#E23B3B")
+            editable.setSpan(ForegroundColorSpan(red), 0, progress, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            editable.setSpan(UnderlineSpan(), 0, progress, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     private fun updateBackgroundStatus() {
