@@ -1,6 +1,5 @@
 package com.customkeyboard.app
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -17,7 +16,6 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import kotlin.random.Random
 
 class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
@@ -119,7 +117,6 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     private val handler = Handler(Looper.getMainLooper())
     private var highlightedLabel: String? = null
     private var highlightAlpha: Int = 0
-    private var highlightAnimator: ValueAnimator? = null
 
     private var spacePressed = false
     private var spacePointerId = -1
@@ -1368,22 +1365,33 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
         }
     }
 
+    private var flashStepRunnable: Runnable? = null
+    private val flashAlphaSteps = intArrayOf(255, 210, 165, 120, 80, 45, 0)
+
     private fun flashKey(label: String) {
-        highlightAnimator?.removeAllUpdateListeners()
-        highlightAnimator?.cancel()
+        flashStepRunnable?.let { handler.removeCallbacks(it) }
+        highlightPaint.color = PrefsHelper.getFlashColor(context) // همیشه آخرین رنگِ ذخیره‌شده رو تازه بخون
         highlightedLabel = label
-        highlightAlpha = 255
+        highlightAlpha = flashAlphaSteps[0]
         invalidate()
-        val animator = ValueAnimator.ofInt(255, 0)
-        animator.duration = 150L
-        animator.startDelay = 35L
-        animator.interpolator = DecelerateInterpolator()
-        animator.addUpdateListener { anim ->
-            highlightAlpha = anim.animatedValue as Int
-            invalidate()
+
+        var stepIndex = 1
+        val runnable = object : Runnable {
+            override fun run() {
+                if (highlightedLabel != label) return // یه فلشِ جدید شروع شده؛ این یکی رو رها کن
+                if (stepIndex >= flashAlphaSteps.size) {
+                    highlightedLabel = null
+                    invalidate()
+                    return
+                }
+                highlightAlpha = flashAlphaSteps[stepIndex]
+                invalidate()
+                stepIndex++
+                handler.postDelayed(this, 22L)
+            }
         }
-        highlightAnimator = animator
-        animator.start()
+        flashStepRunnable = runnable
+        handler.postDelayed(runnable, 45L)
     }
 
     fun highlightKey(char: String) {
