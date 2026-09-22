@@ -1,7 +1,5 @@
 package com.customkeyboard.app
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
@@ -1371,28 +1369,21 @@ class CustomKeyboardView(context: Context, attrs: AttributeSet? = null) :
     }
 
     private fun flashKey(label: String) {
+        highlightAnimator?.removeAllUpdateListeners()
         highlightAnimator?.cancel()
         highlightedLabel = label
         highlightAlpha = 255
         invalidate()
-        highlightAnimator = ValueAnimator.ofInt(255, 0).apply {
-            duration = 150L
-            startDelay = 35L
-            interpolator = DecelerateInterpolator()
-            addUpdateListener {
-                highlightAlpha = it.animatedValue as Int
-                invalidate()
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (highlightedLabel == label) {
-                        highlightedLabel = null
-                        invalidate()
-                    }
-                }
-            })
-            start()
+        val animator = ValueAnimator.ofInt(255, 0)
+        animator.duration = 150L
+        animator.startDelay = 35L
+        animator.interpolator = DecelerateInterpolator()
+        animator.addUpdateListener { anim ->
+            highlightAlpha = anim.animatedValue as Int
+            invalidate()
         }
+        highlightAnimator = animator
+        animator.start()
     }
 
     fun highlightKey(char: String) {
