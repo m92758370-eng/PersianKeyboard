@@ -1,5 +1,8 @@
 package com.customkeyboard.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -271,5 +274,21 @@ class OverlapProjectActivity : AppCompatActivity() {
             resultsContainer.addView(numberLabel)
             resultsContainer.addView(body)
         }
+
+        // دکمه‌ی کپیِ همه، همیشه ته‌ته‌ِ لیستِ نتایج
+        val btnCopyAll = Button(this).apply {
+            text = "کپیِ همه‌ی عبارت‌های پیداشده (${phrases.size})"
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = (12 * density).toInt() }
+            setOnClickListener {
+                val joined = phrases.joinToString("\n")
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("عبارت‌های مشترک", joined))
+                Toast.makeText(this@OverlapProjectActivity, "همه‌ی ${phrases.size} عبارت کپی شد", Toast.LENGTH_SHORT).show()
+            }
+        }
+        resultsContainer.addView(btnCopyAll)
     }
 }
