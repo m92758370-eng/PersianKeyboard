@@ -261,10 +261,57 @@ class WordShuffleActivity : AppCompatActivity() {
             minLines = 8
             gravity = android.view.Gravity.TOP or android.view.Gravity.START
             hint = "هر کلمه تو یه خط..."
+            maxLines = 14
+            isVerticalScrollBarEnabled = true
         }
+
+        // نوار جستجو: خط‌هایی که شامل متن جستجو هستن می‌پرن بالای لیست
+        val density = resources.displayMetrics.density
+        val edtSearch = EditText(this).apply {
+            hint = "جستجوی حرف یا کلمه..."
+            maxLines = 1
+            setSingleLine(true)
+            layoutParams = LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val btnSearch = Button(this).apply {
+            text = "جستجو"
+        }
+        val searchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(edtSearch)
+            addView(btnSearch)
+        }
+        val dialogContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((16 * density).toInt(), (8 * density).toInt(), (16 * density).toInt(), 0)
+            addView(searchRow)
+            addView(edt)
+        }
+
+        val runSearch = {
+            val query = edtSearch.text.toString().trim()
+            if (query.isEmpty()) {
+                Toast.makeText(this, "یه حرف یا کلمه بنویس", Toast.LENGTH_SHORT).show()
+            } else {
+                val lines = edt.text.toString().split("\n").filter { it.isNotBlank() }
+                val matched = lines.filter { it.contains(query, ignoreCase = true) }
+                if (matched.isEmpty()) {
+                    Toast.makeText(this, "چیزی پیدا نشد", Toast.LENGTH_SHORT).show()
+                } else {
+                    val rest = lines.filterNot { it.contains(query, ignoreCase = true) }
+                    edt.setText((matched + rest).joinToString("\n"))
+                    edt.setSelection(0)
+                    edt.scrollTo(0, 0)
+                    Toast.makeText(this, "${matched.size} مورد پیدا شد و رفت بالای لیست", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        btnSearch.setOnClickListener { runSearch() }
+        edtSearch.setOnEditorActionListener { _, _, _ -> runSearch(); true }
+
         AlertDialog.Builder(this)
             .setTitle("ویرایش لیست \"$name\"")
-            .setView(edt)
+            .setView(dialogContent)
             .setPositiveButton("ذخیره") { _, _ ->
                 val newWords = edt.text.toString()
                     .split("\n")
