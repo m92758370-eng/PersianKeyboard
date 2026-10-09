@@ -44,6 +44,8 @@ object PrefsHelper {
     private const val KEY_KB_LEFT_MARGIN_FRACTION = "kb_left_margin_fraction"
     private const val KEY_USER_WORD_COUNTS = "user_word_counts"
     private const val KEY_FLASH_COLOR = "key_flash_color"
+    private const val KEY_LETTER_DUPLICATE_PERCENT = "letter_duplicate_percent"
+    private const val KEY_LETTER_REMOVE_PERCENT = "letter_remove_percent"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -432,6 +434,24 @@ object PrefsHelper {
 
     fun setFlashColor(context: Context, color: Int) {
         prefs(context).edit().putInt(KEY_FLASH_COLOR, color).apply()
+    }
+
+    // درصدِ کلماتی که توی «ترکیب کلمات» یه حرفشون دوبار تکرار می‌شه (پیش‌فرض ۷۰، دستیه از تنظیمات)
+    fun getLetterDuplicatePercent(context: Context): Int {
+        return prefs(context).getInt(KEY_LETTER_DUPLICATE_PERCENT, 70)
+    }
+
+    fun setLetterDuplicatePercent(context: Context, percent: Int) {
+        prefs(context).edit().putInt(KEY_LETTER_DUPLICATE_PERCENT, percent).apply()
+    }
+
+    // درصدِ کلماتی که یه حرفشون حذف می‌شه — کاملاً مستقل از قابلیتِ بالا (پیش‌فرض ۰، تا خودت روشنش کنی)
+    fun getLetterRemovePercent(context: Context): Int {
+        return prefs(context).getInt(KEY_LETTER_REMOVE_PERCENT, 0)
+    }
+
+    fun setLetterRemovePercent(context: Context, percent: Int) {
+        prefs(context).edit().putInt(KEY_LETTER_REMOVE_PERCENT, percent).apply()
     }
 
     fun resetKeyboardEditorLayout(context: Context) {
