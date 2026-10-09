@@ -135,6 +135,22 @@ class WordShuffleActivity : AppCompatActivity() {
             Toast.makeText(this, "$added کلمه اضافه شد", Toast.LENGTH_SHORT).show()
         }
 
+        holder.edtDuplicatePercent.setText(PrefsHelper.getLetterDuplicatePercent(this).toString())
+        holder.edtRemovePercent.setText(PrefsHelper.getLetterRemovePercent(this).toString())
+        holder.btnSaveTypoPercents.setOnClickListener {
+            val dup = holder.edtDuplicatePercent.text.toString().toIntOrNull()?.coerceIn(0, 100)
+            val rem = holder.edtRemovePercent.text.toString().toIntOrNull()?.coerceIn(0, 100)
+            if (dup == null || rem == null) {
+                Toast.makeText(this, "یه عددِ درستِ بینِ ۰ تا ۱۰۰ بنویس", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            PrefsHelper.setLetterDuplicatePercent(this, dup)
+            PrefsHelper.setLetterRemovePercent(this, rem)
+            holder.edtDuplicatePercent.setText(dup.toString())
+            holder.edtRemovePercent.setText(rem.toString())
+            Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
+        }
+
         holder.btnGenerate.setOnClickListener {
             generateNextParagraph(holder)
         }
@@ -360,11 +376,20 @@ class WordShuffleActivity : AppCompatActivity() {
         var previous: String? = PrefsHelper.getLastWord(this)
         val rnd = Random(System.nanoTime())
 
-        // برای این پارت، هر کلمه فقط یه‌بار تصمیم می‌گیره که «تمیز» بمونه یا یه غلط‌تایپیِ انسانی
-        // (تکرارِ یه حرف) بگیره؛ همین شکل تو کل این پارت ثابت می‌مونه. پارتِ بعدی دوباره تصمیم می‌گیره
+        // برای این پارت، هر کلمه فقط یه‌بار تصمیم می‌گیره که «تمیز» بمونه، یه حرفش تکرار بشه،
+        // یا یه حرفش حذف بشه — این دو قابلیت کاملاً مستقل و بی‌ربط به همن: یه کلمه فقط حداکثر
+        // یکیشون رو می‌گیره، هیچ‌وقت هم‌زمان هر دوتا رو نمی‌گیره. همین شکل تو کل این پارت ثابت
+        // می‌مونه؛ پارتِ بعدی دوباره تصمیم می‌گیره
+        val duplicatePercent = PrefsHelper.getLetterDuplicatePercent(this)
+        val removePercent = PrefsHelper.getLetterRemovePercent(this)
         val wordVariants = mutableMapOf<String, String>()
         for (word in currentWords.distinct()) {
-            wordVariants[word] = maybeAddHumanTypo(word, rnd)
+            val roll = rnd.nextInt(100)
+            wordVariants[word] = when {
+                roll < duplicatePercent -> duplicateRandomLetter(word, rnd)
+                roll < duplicatePercent + removePercent -> removeRandomLetter(word, rnd)
+                else -> word
+            }
         }
 
         while (resultWords.size < WORDS_PER_PART) {
@@ -425,12 +450,17 @@ class WordShuffleActivity : AppCompatActivity() {
         holder.txtParagraphCount.text = "پارت تولید شده: ${PrefsHelper.getParagraphs(this).size}"
     }
 
-    // با احتمالِ ۷۰٪ یه حرفِ تصادفیِ کلمه رو دوبار می‌کنه (شبیه غلطِ تایپیِ انسانی)، بدون به‌هم‌ریختنِ
-    // بقیه‌ی حروف یا ترتیبشون؛ ۳۰٪ باقی‌مونده کلمه دست‌نخورده می‌مونه
-    private fun maybeAddHumanTypo(word: String, rnd: Random): String {
+    // یه حرفِ تصادفیِ کلمه رو دوبار می‌کنه (مثلاً سلام ← سلاام)، بدون به‌هم‌ریختنِ بقیه‌ی حروف یا ترتیبشون
+    private fun duplicateRandomLetter(word: String, rnd: Random): String {
         if (word.length < 2) return word
-        if (rnd.nextInt(100) >= 70) return word
         val index = rnd.nextInt(word.length)
         return word.substring(0, index + 1) + word[index] + word.substring(index + 1)
+    }
+
+    // یه حرفِ تصادفیِ کلمه رو حذف می‌کنه (مثلاً سلام ← سلم)
+    private fun removeRandomLetter(word: String, rnd: Random): String {
+        if (word.length < 2) return word
+        val index = rnd.nextInt(word.length)
+        return word.substring(0, index) + word.substring(index + 1)
     }
 }
