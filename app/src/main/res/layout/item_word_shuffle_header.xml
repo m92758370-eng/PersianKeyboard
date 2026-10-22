@@ -178,6 +178,27 @@
         android:layout_marginTop="6dp"
         android:text="ذخیره‌ی درصدها" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="تعداد خط (کلمه) در هر پارت" />
+
+    <EditText
+        android:id="@+id/edtWordsPerPart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:maxLength="5"
+        android:hint="مثلاً 350" />
+
+    <Button
+        android:id="@+id/btnSaveWordsPerPart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="ذخیره‌ی تعداد خط" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
