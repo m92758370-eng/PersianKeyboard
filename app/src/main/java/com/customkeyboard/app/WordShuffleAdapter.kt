@@ -62,6 +62,8 @@ class WordShuffleAdapter(
         val edtDuplicatePercent: EditText = view.findViewById(R.id.edtDuplicatePercent)
         val edtRemovePercent: EditText = view.findViewById(R.id.edtRemovePercent)
         val btnSaveTypoPercents: Button = view.findViewById(R.id.btnSaveTypoPercents)
+        val edtWordsPerPart: EditText = view.findViewById(R.id.edtWordsPerPart)
+        val btnSaveWordsPerPart: Button = view.findViewById(R.id.btnSaveWordsPerPart)
         val btnGenerate: Button = view.findViewById(R.id.btnGenerate)
         val txtParagraphCount: TextView = view.findViewById(R.id.txtParagraphCount)
         val btnResetProgress: Button = view.findViewById(R.id.btnResetProgress)
