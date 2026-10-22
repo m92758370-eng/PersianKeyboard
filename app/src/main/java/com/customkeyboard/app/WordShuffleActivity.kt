@@ -31,7 +31,6 @@ class WordShuffleActivity : AppCompatActivity() {
     private lateinit var adapter: WordShuffleAdapter
 
     companion object {
-        private const val WORDS_PER_PART = 350
         // این کاراکتر نامرئی دور کلمه‌های تکراری (خط قرمز) رو تو متن ذخیره‌شده مشخص می‌کنه
         // تا بعد از بستن و باز کردن دوباره‌ی صفحه هم علامت قرمزها از بین نره
         private const val MARK = "\u0004"
@@ -149,6 +148,17 @@ class WordShuffleActivity : AppCompatActivity() {
             holder.edtDuplicatePercent.setText(dup.toString())
             holder.edtRemovePercent.setText(rem.toString())
             Toast.makeText(this, "ذخیره شد", Toast.LENGTH_SHORT).show()
+        }
+
+        holder.edtWordsPerPart.setText(PrefsHelper.getWordsPerPart(this).toString())
+        holder.btnSaveWordsPerPart.setOnClickListener {
+            val count = holder.edtWordsPerPart.text.toString().toIntOrNull()
+            if (count == null || count < 1) {
+                Toast.makeText(this, "یه عددِ درست (حداقل ۱) بنویس", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            PrefsHelper.setWordsPerPart(this, count)
+            Toast.makeText(this, "از پارت بعدی، هر پارت $count خط می‌شه", Toast.LENGTH_SHORT).show()
         }
 
         holder.btnGenerate.setOnClickListener {
@@ -416,6 +426,7 @@ class WordShuffleActivity : AppCompatActivity() {
 
         val usedPairs = PrefsHelper.getUsedPairs(this).toMutableSet()
         val newPairsThisRun = mutableListOf<Pair<String, String>>()
+        val wordsPerPart = PrefsHelper.getWordsPerPart(this)
         val resultWords = mutableListOf<String>()
         val violationIndices = mutableSetOf<Int>()
 
@@ -439,9 +450,9 @@ class WordShuffleActivity : AppCompatActivity() {
             }
         }
 
-        while (resultWords.size < WORDS_PER_PART) {
+        while (resultWords.size < wordsPerPart) {
             val pool = currentWords.shuffled(rnd).toMutableList()
-            while (pool.isNotEmpty() && resultWords.size < WORDS_PER_PART) {
+            while (pool.isNotEmpty() && resultWords.size < wordsPerPart) {
                 var chosenIndex = -1
                 for (i in pool.indices) {
                     val candidate = pool[i]
