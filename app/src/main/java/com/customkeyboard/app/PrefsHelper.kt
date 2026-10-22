@@ -46,6 +46,7 @@ object PrefsHelper {
     private const val KEY_FLASH_COLOR = "key_flash_color"
     private const val KEY_LETTER_DUPLICATE_PERCENT = "letter_duplicate_percent"
     private const val KEY_LETTER_REMOVE_PERCENT = "letter_remove_percent"
+    private const val KEY_WORDS_PER_PART = "words_per_part"
 
     const val DEFAULT_DELAY_MS = 15L
     const val MIN_DELAY_MS = 5L
@@ -452,6 +453,15 @@ object PrefsHelper {
 
     fun setLetterRemovePercent(context: Context, percent: Int) {
         prefs(context).edit().putInt(KEY_LETTER_REMOVE_PERCENT, percent).apply()
+    }
+
+    // تعداد خط (کلمه) در هر پارتِ ترکیب کلمات — پیش‌فرض ۳۵۰
+    fun getWordsPerPart(context: Context): Int {
+        return prefs(context).getInt(KEY_WORDS_PER_PART, 350)
+    }
+
+    fun setWordsPerPart(context: Context, count: Int) {
+        prefs(context).edit().putInt(KEY_WORDS_PER_PART, count).apply()
     }
 
     fun resetKeyboardEditorLayout(context: Context) {
