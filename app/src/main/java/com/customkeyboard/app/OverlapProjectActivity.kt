@@ -14,6 +14,7 @@ import android.text.style.UnderlineSpan
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -40,6 +41,7 @@ class OverlapProjectActivity : AppCompatActivity() {
     private lateinit var edtPartInput: EditText
     private lateinit var edtMinLength: EditText
     private lateinit var btnFindOverlap: Button
+    private lateinit var chkExactCount: CheckBox
     private lateinit var progressBar: ProgressBar
     private lateinit var scrollRoot: ScrollView
     private lateinit var resultsHeading: TextView
@@ -62,6 +64,7 @@ class OverlapProjectActivity : AppCompatActivity() {
         edtPartInput = findViewById(R.id.edtPartInput)
         edtMinLength = findViewById(R.id.edtMinLength)
         btnFindOverlap = findViewById(R.id.btnFindOverlap)
+        chkExactCount = findViewById(R.id.chkExactCount)
         progressBar = findViewById(R.id.progressBarOverlap)
         scrollRoot = findViewById(R.id.scrollRoot)
         resultsHeading = findViewById(R.id.resultsHeading)
@@ -173,8 +176,10 @@ class OverlapProjectActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
 
         val textsSnapshot = parts.toList()
+        val exact = chkExactCount.isChecked
         executor.execute {
-            val phrases = computeOverlaps(textsSnapshot, minLen)
+            val phrases = if (exact) computeExactOverlaps(textsSnapshot, minLen)
+            else computeOverlaps(textsSnapshot, minLen)
             mainHandler.post {
                 progressBar.visibility = View.GONE
                 btnFindOverlap.isEnabled = true
@@ -201,6 +206,27 @@ class OverlapProjectActivity : AppCompatActivity() {
                 val b = wordArrays[j]
                 if (a.isEmpty() || b.isEmpty()) continue
                 collectMaximalRunPhrases(a, b, minLen, phrases)
+            }
+        }
+        return phrases.toList()
+    }
+
+    // حالت «دقیقاً N کلمه»: فقط عبارت‌هایی که درست N کلمه‌ان و تو دو پارت (یا دو جای یه پارت) تکرار شدن
+    private fun computeExactOverlaps(texts: List<String>, n: Int): List<String> {
+        val wordArrays = texts.map { tokenize(it) }
+        val grams = wordArrays.map { words ->
+            val counts = LinkedHashMap<String, Int>()
+            for (s in 0..words.size - n) {
+                val g = words.subList(s, s + n).joinToString(" ")
+                counts[g] = (counts[g] ?: 0) + 1
+            }
+            counts
+        }
+        val phrases = LinkedHashSet<String>()
+        for (i in grams.indices) {
+            for ((g, c) in grams[i]) if (c >= 2) phrases.add(g)
+            for (j in i + 1 until grams.size) {
+                for (g in grams[i].keys) if (g in grams[j]) phrases.add(g)
             }
         }
         return phrases.toList()
